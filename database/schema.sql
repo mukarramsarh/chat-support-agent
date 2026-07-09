@@ -142,7 +142,9 @@ CREATE TABLE IF NOT EXISTS conversations (
     visitor_id    VARCHAR(64)   NOT NULL,             -- stable anon id from widget (localStorage)
     channel       VARCHAR(40)   NOT NULL DEFAULT 'widget',
     summary       MEDIUMTEXT    NULL,                 -- rolling long-term summary of older turns
-    status        ENUM('open','closed','escalated') NOT NULL DEFAULT 'open',
+    -- Lifecycle status (auto-derived by ChatService, overridable in admin):
+    status        ENUM('incomplete','ai_answered','needs_attention','escalated','resolved','abandoned')
+                  NOT NULL DEFAULT 'incomplete',
     page_url      VARCHAR(1000) NULL,                 -- where the chat started
     metadata      JSON          NULL,
     message_count INT UNSIGNED  NOT NULL DEFAULT 0,

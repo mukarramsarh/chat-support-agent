@@ -10,6 +10,8 @@ use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
+use SupportAI\Infrastructure\Persistence\ConversationRepository;
+use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
@@ -31,6 +33,8 @@ final class AdminController
         private UsageRepository $usage,
         private VectorStoreFactory $vectors,
         private ProviderFactory $providers,
+        private ConversationRepository $conversations,
+        private MessageRepository $messages,
         private Database $db,
         private Config $config,
     ) {
@@ -182,11 +186,49 @@ final class AdminController
 
     public function conversations(Request $request): void
     {
+        $filter = (string) $request->input('status', '');
+        $where = '';
+        $params = [];
+        if (in_array($filter, ConversationRepository::STATUSES, true)) {
+            $where = 'WHERE c.status = :s';
+            $params['s'] = $filter;
+        }
         $rows = $this->db->all(
-            'SELECT c.*, (SELECT content FROM messages m WHERE m.conversation_id=c.id AND m.role=\'user\' ORDER BY m.id ASC LIMIT 1) AS first_message
-               FROM conversations c ORDER BY c.updated_at DESC LIMIT 100'
+            "SELECT c.*, (SELECT content FROM messages m WHERE m.conversation_id=c.id AND m.role='user' ORDER BY m.id ASC LIMIT 1) AS first_message
+               FROM conversations c {$where} ORDER BY c.updated_at DESC LIMIT 100",
+            $params
         );
-        $this->page('conversations', 'Conversations', ['conversations' => $rows]);
+        $counts = [];
+        foreach ($this->db->all('SELECT status, COUNT(*) c FROM conversations GROUP BY status') as $r) {
+            $counts[$r['status']] = (int) $r['c'];
+        }
+        $this->page('conversations', 'Conversations', [
+            'conversations' => $rows,
+            'counts'        => $counts,
+            'filter'        => $filter,
+        ]);
+    }
+
+    public function conversationDetail(Request $request, array $params): void
+    {
+        $id = (int) ($params['id'] ?? 0);
+        $conversation = $this->conversations->findById($id);
+        if ($conversation === null) {
+            Response::redirect('/admin/conversations');
+            return;
+        }
+        $this->page('conversation_detail', 'Session', [
+            'conversation' => $conversation,
+            'messages'     => $this->messages->allForConversation($id),
+            'statuses'     => ConversationRepository::STATUSES,
+        ]);
+    }
+
+    public function updateConversationStatus(Request $request, array $params): void
+    {
+        $id = (int) ($params['id'] ?? 0);
+        $this->conversations->setStatus($id, (string) $request->input('status', ''));
+        Response::redirect('/admin/conversations/' . $id);
     }
 
     public function costs(Request $request): void

@@ -68,6 +68,21 @@ final class MessageRepository
         }
     }
 
+    /**
+     * Every message in a conversation, oldest-first, with full telemetry for the
+     * admin session-detail view.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function allForConversation(int $conversationId): array
+    {
+        return $this->db->all(
+            'SELECT id, role, content, citations, model, tokens_in, tokens_out, cost_usd, eval, latency_ms, created_at
+               FROM messages WHERE conversation_id = :id ORDER BY id ASC',
+            ['id' => $conversationId]
+        );
+    }
+
     public function addUser(int $conversationId, string $content): int
     {
         $this->db->run(

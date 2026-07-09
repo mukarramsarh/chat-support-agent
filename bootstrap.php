@@ -134,6 +134,8 @@ $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(UsageRepository::class),
     $c->get(VectorStoreFactory::class),
     $c->get(ProviderFactory::class),
+    $c->get(ConversationRepository::class),
+    $c->get(MessageRepository::class),
     $c->get(Database::class),
     $c->get(Config::class),
 ));

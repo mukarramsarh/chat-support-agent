@@ -12,10 +12,18 @@ final class ConversationRepository
     {
     }
 
+    public const STATUSES = ['incomplete', 'ai_answered', 'needs_attention', 'escalated', 'resolved', 'abandoned'];
+
     /** @return array<string,mixed>|null */
     public function findByPublicId(string $publicId): ?array
     {
         return $this->db->first('SELECT * FROM conversations WHERE public_id = :id', ['id' => $publicId]);
+    }
+
+    /** @return array<string,mixed>|null */
+    public function findById(int $id): ?array
+    {
+        return $this->db->first('SELECT * FROM conversations WHERE id = :id', ['id' => $id]);
     }
 
     public function create(int $agentId, string $visitorId, ?string $pageUrl): array
@@ -59,6 +67,9 @@ final class ConversationRepository
 
     public function setStatus(int $id, string $status): void
     {
+        if (!in_array($status, self::STATUSES, true)) {
+            return; // ignore unknown status values
+        }
         $this->db->run('UPDATE conversations SET status = :s WHERE id = :id', ['s' => $status, 'id' => $id]);
     }
 }

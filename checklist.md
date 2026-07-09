@@ -39,15 +39,17 @@
 - [ ] Target meaningful coverage on Domain/Application layers
 
 ## 5. Detailed conversation history (per-session) in admin — 🟡
-- [x] Conversations list page
-- [ ] Session detail view: full transcript, citations, per-message cost/tokens, eval telemetry, latency
-- [ ] Filters (status, date, cost) + search
+- [x] Conversations list page (clickable rows → detail)
+- [x] Session detail view: full transcript, citations, per-message cost/tokens, eval telemetry, latency, model
+- [x] Status filter chips + counts
+- [ ] Date/cost filters + free-text search
 - [ ] Export a session (JSON/CSV)
 
-## 6. Per-session status labels — ⬜
-- [ ] Status enum: `incomplete`, `ai_answered`, `needs_attention`, `escalated`, `resolved`, `abandoned`
-- [ ] Auto-derive: low groundedness / fallback / budget-declined → `needs_attention`; handoff → `escalated`; normal → `ai_answered`
-- [ ] Manual override in admin; colored pills; dashboard counts
+## 6. Per-session status labels — ✅
+- [x] Status enum: `incomplete`, `ai_answered`, `needs_attention`, `escalated`, `resolved`, `abandoned`
+- [x] Auto-derive: fallback / budget-declined / ungrounded → `needs_attention`; normal → `ai_answered`
+- [x] Manual override in admin (session detail); colored pills; list counts
+- [ ] Dashboard tile for `needs_attention` count (nice-to-have)
 
 ## 7. Intelligent chat memory (last ~3 turns + relevant old messages) — 🟡
 - [x] Recent verbatim window (last ~3 turns) via MemoryService

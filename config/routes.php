@@ -40,5 +40,7 @@ return function (Router $router, Container $container): void {
     $router->post('/admin/knowledge/upload', [DocumentController::class, 'upload'], ['admin']);
     $router->post('/admin/knowledge/delete', [DocumentController::class, 'delete'], ['admin']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
+    $router->get('/admin/conversations/{id}', [AdminController::class, 'conversationDetail'], ['admin']);
+    $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);
 };

@@ -92,9 +92,11 @@ final class ChatService
             return;
         }
 
+        $usedFallback = false;
         if (trim($answer) === '') {
             $answer = (string) $agent['fallback_message'];
             $sse->token($answer);
+            $usedFallback = true;
         }
 
         // ── Persist + account ──
@@ -114,6 +116,11 @@ final class ChatService
             $latency,
         );
         $this->conversations->touch($conversationId, $cost);
+
+        // Auto-derive session status (admin can override). A fallback answer or
+        // ungrounded reply that used no knowledge is flagged for a human to review.
+        $needsAttention = $usedFallback || (!$context->hasKnowledge && $context->topScore > 0.0);
+        $this->conversations->setStatus($conversationId, $needsAttention ? 'needs_attention' : 'ai_answered');
 
         $sse->event('done', [
             'usage' => [
@@ -180,6 +187,7 @@ final class ChatService
             $conversationId, $msg, 'none', new Usage(), 0.0, [],
             ['verdict' => 'declined', 'reason' => 'budget'],
         );
+        $this->conversations->setStatus($conversationId, 'needs_attention');
         $sse->event('done', ['usage' => ['cost_usd' => 0], 'budget_exceeded' => true]);
     }
 }
