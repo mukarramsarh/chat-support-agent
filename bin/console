@@ -1,0 +1,67 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+/**
+ * support-ai CLI. Usage:
+ *   php bin/console install     # create schema + seed the single agent
+ *   php bin/console migrate     # (re)apply database/schema.sql idempotently
+ *   php bin/console cron        # drain the job queue once (call from crontab)
+ *   php bin/console vector:info # show which vector store this host selects
+ */
+
+use SupportAI\Infrastructure\Database\Database;
+use SupportAI\Infrastructure\Vector\VectorStoreFactory;
+use SupportAI\Support\Container;
+
+/** @var Container $c */
+$c = require dirname(__DIR__) . '/bootstrap.php';
+
+$command = $argv[1] ?? 'help';
+$db = $c->get(Database::class);
+
+switch ($command) {
+    case 'install':
+    case 'migrate':
+        runSqlFile($db, dirname(__DIR__) . '/database/schema.sql');
+        echo "✓ Schema applied.\n";
+        if ($command === 'install') {
+            runSqlFile($db, dirname(__DIR__) . '/database/seed.sql');
+            echo "✓ Seed applied. Visit /admin to create the owner account.\n";
+        }
+        break;
+
+    case 'vector:info':
+        $store = $c->get(VectorStoreFactory::class)->make();
+        echo "Server: " . $db->serverVersion() . "\n";
+        echo "Native VECTOR supported: " . ($db->supportsNativeVector() ? 'yes' : 'no') . "\n";
+        echo "Selected driver: " . $store->driver() . "\n";
+        break;
+
+    case 'cron':
+        // Phase 2 registers job handlers here; for now this is a no-op tick.
+        echo "cron: no jobs registered yet (ingestion lands in Phase 2).\n";
+        break;
+
+    default:
+        echo "Commands: install | migrate | cron | vector:info\n";
+}
+
+/** Execute a .sql file statement-by-statement (handles multi-statement files). */
+function runSqlFile(Database $db, string $path): void
+{
+    if (!is_file($path)) {
+        fwrite(STDERR, "SQL file not found: {$path}\n");
+        exit(1);
+    }
+    $sql = file_get_contents($path);
+    // Strip line comments, then split on semicolons at line ends.
+    $sql = preg_replace('/^\s*--.*$/m', '', $sql);
+    foreach (array_filter(array_map('trim', explode(";\n", $sql . "\n"))) as $statement) {
+        if ($statement === '') {
+            continue;
+        }
+        $db->pdo()->exec($statement);
+    }
+}

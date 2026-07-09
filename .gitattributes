@@ -1,0 +1,9 @@
+# Normalise line endings — this project deploys to Linux/Docker, so keep LF in
+# the repo regardless of the checkout OS. Prevents CRLF sneaking into shell
+# entrypoints and shebang lines.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary

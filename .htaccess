@@ -1,0 +1,14 @@
+# Safety net if the domain root is the PROJECT root instead of /public.
+# Best practice: point the document root at /public. If you can't, this
+# redirects browser traffic into public/ and blocks access to app internals.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^$ public/ [L]
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Block direct access to sensitive directories/files.
+<FilesMatch "\.(env|sql|md|json|lock)$">
+    Require all denied
+</FilesMatch>

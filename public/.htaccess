@@ -1,0 +1,17 @@
+# Route everything through the front controller (Apache / shared hosting).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Never serve dotfiles.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# SSE needs buffering off; helps if mod_deflate is on.
+<IfModule mod_env.c>
+    SetEnv no-gzip 1
+</IfModule>
