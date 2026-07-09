@@ -13,6 +13,7 @@ use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Support\Config;
+use SupportAI\Support\RateLimiter;
 
 /**
  * Public chat API consumed by the embedded widget. The main endpoint streams
@@ -27,6 +28,7 @@ final class ChatController
         private ChatService $chat,
         private LeadRepository $leads,
         private SettingsRepository $settings,
+        private RateLimiter $rateLimiter,
         private Config $config,
     ) {
     }
@@ -34,6 +36,12 @@ final class ChatController
     public function message(Request $request): void
     {
         $this->applyCors($request);
+
+        // Rate limit: cap messages per IP per minute (abuse + budget protection).
+        if ($this->rateLimiter->tooMany('chat:' . $request->ip(), 30, 60)) {
+            Response::error('Too many messages. Please slow down.', 429);
+            return;
+        }
 
         $text = trim((string) $request->input('message', ''));
         if ($text === '') {
@@ -75,6 +83,10 @@ final class ChatController
     public function lead(Request $request): void
     {
         $this->applyCors($request);
+        if ($this->rateLimiter->tooMany('lead:' . $request->ip(), 10, 60)) {
+            Response::error('Too many submissions. Please try again shortly.', 429);
+            return;
+        }
 
         $agent = $this->agents->find();
         if ($agent === null) {
@@ -130,9 +142,10 @@ final class ChatController
     }
 
     /**
-     * Reflect an allowed Origin for cross-site embedding. If the agent has no
-     * domain allowlist configured we fall back to '*' (open) — the admin is
-     * warned to lock this down for production.
+     * Reflect the Origin only if it is on the configured allowlist. When no
+     * domains are configured we fall back to open ('*') for easy setup, but the
+     * admin is encouraged to lock this down. Blocking = simply not sending the
+     * CORS header, which makes the browser refuse the cross-site request.
      */
     private function applyCors(Request $request): void
     {
@@ -140,10 +153,39 @@ final class ChatController
         if ($origin === null) {
             return;
         }
-        // Phase 5 will check agent_domains; for now echo the origin to support
-        // credentialed cross-origin streaming during development.
-        header("Access-Control-Allow-Origin: {$origin}");
-        header('Access-Control-Allow-Headers: Content-Type');
         header('Vary: Origin');
+        header('Access-Control-Allow-Headers: Content-Type');
+
+        $allowed = $this->allowedDomains();
+        if ($allowed === []) {
+            header("Access-Control-Allow-Origin: {$origin}"); // open until configured
+            return;
+        }
+        $host = strtolower((string) parse_url($origin, PHP_URL_HOST));
+        foreach ($allowed as $d) {
+            if ($host === $d || str_ends_with($host, '.' . $d)) {
+                header("Access-Control-Allow-Origin: {$origin}");
+                return;
+            }
+        }
+        // Not allowed → no ACAO header; browser blocks the response.
+    }
+
+    /** @return string[] configured embed domains (hostnames, lowercased) */
+    private function allowedDomains(): array
+    {
+        $raw = (string) $this->settings->get('allowed_domains', '');
+        $parts = preg_split('/[\s,]+/', $raw) ?: [];
+        $out = [];
+        foreach ($parts as $p) {
+            $p = strtolower(trim($p));
+            if ($p === '') {
+                continue;
+            }
+            // Accept full URLs or bare hosts.
+            $host = parse_url($p, PHP_URL_HOST) ?: $p;
+            $out[] = ltrim($host, '.');
+        }
+        return array_values(array_unique($out));
     }
 }

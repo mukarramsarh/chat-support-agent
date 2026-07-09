@@ -27,6 +27,7 @@
 </head>
 <body>
   <form class="box" method="post" action="/admin/login">
+    <?= csrf_field() ?>
     <div class="logo">◆</div>
     <h1><?= $firstRun ? 'Create your account' : 'Welcome back' ?></h1>
     <p class="sub"><?= $firstRun ? 'Set up the owner login for this install.' : 'Sign in to the support-ai admin.' ?></p>

@@ -24,6 +24,7 @@
 
   <!-- Paste text -->
   <form class="tab-pane" data-pane="text" method="post" action="/admin/knowledge/text">
+    <?= csrf_field() ?>
     <div class="field"><label>Title (optional)</label>
       <input type="text" name="title" placeholder="e.g. Refund policy"></div>
     <div class="field" style="margin-top:12px"><label>Text</label>
@@ -33,6 +34,7 @@
 
   <!-- Add URL -->
   <form class="tab-pane" data-pane="url" method="post" action="/admin/knowledge/url" style="display:none">
+    <?= csrf_field() ?>
     <div class="field"><label>Page URL</label>
       <input type="text" name="url" required placeholder="https://example.com/help/article">
       <div class="hint">We extract the main article text (not navigation/ads).</div></div>
@@ -41,6 +43,7 @@
 
   <!-- Upload file -->
   <form class="tab-pane" data-pane="file" method="post" action="/admin/knowledge/upload" enctype="multipart/form-data" style="display:none">
+    <?= csrf_field() ?>
     <div class="field"><label>PDF or DOCX (max 10 MB)</label>
       <input type="file" name="file" accept=".pdf,.docx" required>
       <div class="hint">Scanned/image-only PDFs can't be read (no OCR).</div></div>
@@ -72,6 +75,7 @@
             <td style="color:var(--muted)"><?= e(substr((string) $d['created_at'], 0, 10)) ?></td>
             <td style="text-align:right">
               <form method="post" action="/admin/knowledge/delete" onsubmit="return confirm('Remove this source?')">
+                <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
                 <button class="btn ghost" style="padding:6px 12px;font-size:13px">Delete</button>
               </form>

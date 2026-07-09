@@ -24,6 +24,7 @@ $fmtLabel = fn ($s) => ucfirst(str_replace('_', ' ', $s));
     <div><div style="font-size:13px;color:var(--muted)">Total cost</div><div style="font-weight:600">$<?= number_format((float) $conversation['total_cost_usd'], 5) ?></div></div>
     <div><div style="font-size:13px;color:var(--muted)">Started</div><div style="font-weight:600"><?= e(substr((string) $conversation['created_at'], 0, 16)) ?></div></div>
     <form method="post" action="/admin/conversations/<?= (int) $conversation['id'] ?>/status" style="display:flex;gap:8px;align-items:center">
+      <?= csrf_field() ?>
       <span class="pill <?= $cls ?>"><?= e($label) ?></span>
       <select name="status" onchange="this.form.submit()" style="width:auto">
         <?php foreach ($statuses as $s): ?>

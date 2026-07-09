@@ -7,6 +7,7 @@ use SupportAI\Http\Controller\ChatController;
 use SupportAI\Http\Controller\DocumentController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Http\Middleware\AdminAuth;
+use SupportAI\Http\Middleware\VerifyCsrf;
 use SupportAI\Http\Router;
 use SupportAI\Support\Container;
 
@@ -16,6 +17,7 @@ use SupportAI\Support\Container;
  */
 return function (Router $router, Container $container): void {
     $router->registerMiddleware('admin', new AdminAuth());
+    $router->registerMiddleware('csrf', new VerifyCsrf());
 
     // ── Public: widget + chat API ──
     $router->get('/widget.js', [WidgetController::class, 'script']);
@@ -28,24 +30,24 @@ return function (Router $router, Container $container): void {
 
     // ── Admin area (session-guarded) ──
     $router->get('/admin/login', [AdminController::class, 'loginForm']);
-    $router->post('/admin/login', [AdminController::class, 'login']);
+    $router->post('/admin/login', [AdminController::class, 'login'], ['csrf']);
     $router->get('/admin/logout', [AdminController::class, 'logout']);
 
     $router->get('/admin', [AdminController::class, 'dashboard'], ['admin']);
     $router->get('/admin/agent', [AdminController::class, 'agent'], ['admin']);
-    $router->post('/admin/agent', [AdminController::class, 'saveAgent'], ['admin']);
+    $router->post('/admin/agent', [AdminController::class, 'saveAgent'], ['admin', 'csrf']);
     $router->get('/admin/api/models', [AdminController::class, 'models'], ['admin']);
     $router->get('/admin/knowledge', [AdminController::class, 'knowledge'], ['admin']);
-    $router->post('/admin/knowledge/text', [DocumentController::class, 'addText'], ['admin']);
-    $router->post('/admin/knowledge/url', [DocumentController::class, 'addUrl'], ['admin']);
-    $router->post('/admin/knowledge/upload', [DocumentController::class, 'upload'], ['admin']);
-    $router->post('/admin/knowledge/delete', [DocumentController::class, 'delete'], ['admin']);
+    $router->post('/admin/knowledge/text', [DocumentController::class, 'addText'], ['admin', 'csrf']);
+    $router->post('/admin/knowledge/url', [DocumentController::class, 'addUrl'], ['admin', 'csrf']);
+    $router->post('/admin/knowledge/upload', [DocumentController::class, 'upload'], ['admin', 'csrf']);
+    $router->post('/admin/knowledge/delete', [DocumentController::class, 'delete'], ['admin', 'csrf']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
     $router->get('/admin/conversations/{id}', [AdminController::class, 'conversationDetail'], ['admin']);
-    $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin']);
+    $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin', 'csrf']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);
     $router->get('/admin/privacy', [AdminController::class, 'privacy'], ['admin']);
-    $router->post('/admin/privacy', [AdminController::class, 'savePrivacy'], ['admin']);
-    $router->post('/admin/privacy/erase', [AdminController::class, 'eraseVisitor'], ['admin']);
+    $router->post('/admin/privacy', [AdminController::class, 'savePrivacy'], ['admin', 'csrf']);
+    $router->post('/admin/privacy/erase', [AdminController::class, 'eraseVisitor'], ['admin', 'csrf']);
     $router->get('/admin/privacy/export', [AdminController::class, 'exportVisitor'], ['admin']);
 };

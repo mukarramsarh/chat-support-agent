@@ -78,12 +78,14 @@
 - [x] Encrypted secrets at rest (Crypto: sodium→openssl)
 - [x] Admin session auth; prepared statements (no SQL injection); output escaping
 - [x] Secrets never committed (.gitignore/.dockerignore)
-- [ ] CSRF tokens on all admin/state-changing forms
-- [ ] Rate limiting on public chat (schema exists — enforce it)
-- [ ] Widget domain allowlist enforced in CORS (currently open `*`)
+- [x] CSRF tokens on all admin/state-changing forms (VerifyCsrf middleware, 403)
+- [x] Rate limiting on public chat + lead (DB-backed RateLimiter)
+- [x] Widget domain allowlist enforced in CORS (agent settings; open only until configured)
+- [x] Security headers (X-Frame-Options, nosniff, Referrer-Policy, CSP frame-ancestors)
+- [x] Brute-force login lockout (8/15min per IP)
+- [x] Upload MIME sniff (fileinfo) + size + extension
 - [ ] Prompt-injection hardening for ingested content + tool boundaries
-- [ ] Security headers (CSP for admin), password policy, brute-force lockout
-- [ ] Upload validation (MIME sniff, size, extension) — partial
+- [ ] Password strength policy; optional 2FA
 
 ## 11. KSA compliance (PDPL / SDAIA) — 0% compromise — 🟡
 - [x] **Consent**: startup form + widget show privacy notice + explicit consent before collecting PII; consent + timestamp + exact text stored

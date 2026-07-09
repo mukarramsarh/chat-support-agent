@@ -90,6 +90,13 @@ final class DocumentController
             }
         }
 
+        // Content-based MIME check (defends against a renamed .exe etc.).
+        if (!$this->mimeMatches($dest, $type)) {
+            @unlink($dest);
+            $this->finish('error', 'The file content does not look like a valid ' . strtoupper($type) . '.');
+            return;
+        }
+
         $title = pathinfo($file['name'], PATHINFO_FILENAME);
         try {
             $this->run(fn () => $this->ingestion->ingest($agentId, $type, [
@@ -115,6 +122,24 @@ final class DocumentController
             return;
         }
         $this->finish('error', 'Source not found.');
+    }
+
+    /** Verify the file's real MIME matches the claimed type (fileinfo optional). */
+    private function mimeMatches(string $path, string $type): bool
+    {
+        if (!function_exists('finfo_open')) {
+            return true; // ext-fileinfo absent on this host — rely on extension check
+        }
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mime = finfo_file($finfo, $path) ?: '';
+        finfo_close($finfo);
+
+        return match ($type) {
+            'pdf'  => str_contains($mime, 'pdf'),
+            // DOCX is a zip container; fileinfo usually reports zip or the OOXML type.
+            'docx' => str_contains($mime, 'zip') || str_contains($mime, 'officedocument') || str_contains($mime, 'msword'),
+            default => false,
+        };
     }
 
     /** Run an ingest closure and flash a friendly result. */

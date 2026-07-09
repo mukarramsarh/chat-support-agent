@@ -50,6 +50,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
     return;
 }
 
+// Baseline security headers (safe for the SSE stream and the script-injected
+// widget, which is never framed). Kept lenient on inline CSP because admin
+// views use inline styles/scripts by design (no build step on shared hosting).
+if (!headers_sent()) {
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header("Content-Security-Policy: frame-ancestors 'none'; base-uri 'self'; object-src 'none'");
+}
+
 $router = new Router($container);
 (require dirname(__DIR__) . '/config/routes.php')($router, $container);
 

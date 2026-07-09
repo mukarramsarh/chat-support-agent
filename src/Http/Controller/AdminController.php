@@ -18,6 +18,7 @@ use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
+use SupportAI\Support\RateLimiter;
 use SupportAI\Support\View;
 use Throwable;
 
@@ -41,6 +42,7 @@ final class AdminController
         private SettingsRepository $settings,
         private LeadRepository $leads,
         private ComplianceService $compliance,
+        private RateLimiter $rateLimiter,
         private Database $db,
         private Config $config,
     ) {
@@ -66,6 +68,13 @@ final class AdminController
 
     public function login(Request $request): void
     {
+        // Brute-force lockout: max 8 failed attempts per IP per 15 minutes.
+        $lockKey = 'login:' . $request->ip();
+        if ($this->rateLimiter->current($lockKey, 900) > 8) {
+            $this->loginError($this->admins->count() === 0, 'Too many attempts. Please wait 15 minutes and try again.');
+            return;
+        }
+
         $email = trim((string) $request->input('email', ''));
         $password = (string) $request->input('password', '');
         $firstRun = $this->admins->count() === 0;
@@ -84,9 +93,11 @@ final class AdminController
 
         $user = $this->admins->findByEmail($email);
         if ($user === null || !password_verify($password, $user['password_hash'])) {
+            $this->rateLimiter->tooMany($lockKey, 8, 900); // count this failed attempt
             $this->loginError($firstRun, 'Invalid email or password.');
             return;
         }
+        $this->rateLimiter->clear($lockKey, 900);
         $_SESSION['admin_id'] = (int) $user['id'];
         $this->admins->touchLogin((int) $user['id']);
         Response::redirect('/admin');
@@ -130,9 +141,10 @@ final class AdminController
     public function agent(Request $request): void
     {
         $this->page('agent', 'Agent settings', [
-            'agent'   => $this->agents->findOrFail(),
-            'saved'   => (bool) $request->input('saved'),
-            'app_url' => $this->config->string('app.url'),
+            'agent'           => $this->agents->findOrFail(),
+            'saved'           => (bool) $request->input('saved'),
+            'app_url'         => $this->config->string('app.url'),
+            'allowed_domains' => (string) $this->settings->get('allowed_domains', ''),
         ]);
     }
 
@@ -157,6 +169,7 @@ final class AdminController
             'monthly_budget_usd'=> (float) $request->input('monthly_budget_usd', 2.0),
             'theme'             => $theme,
         ]);
+        $this->settings->set('allowed_domains', trim((string) $request->input('allowed_domains', '')));
         Response::redirect('/admin/agent?saved=1');
     }
 

@@ -35,6 +35,7 @@ use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Support\PiiRedactor;
+use SupportAI\Support\RateLimiter;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
 use SupportAI\Support\Container;
@@ -57,6 +58,7 @@ $c->set(Logger::class, fn () => new Logger(__DIR__ . '/storage/logs/app.log'));
 $c->set(HttpClient::class, fn () => new HttpClient(120));
 $c->set(Crypto::class, fn (Container $c) => new Crypto($c->get(Config::class)->string('app.key', 'insecure-dev-key-change-me')));
 $c->set(Pricing::class, fn () => new Pricing());
+$c->set(RateLimiter::class, fn (Container $c) => new RateLimiter($c->get(Database::class)));
 
 $c->set(Database::class, fn (Container $c) => new Database($c->get(Config::class)));
 
@@ -132,6 +134,7 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
     $c->get(ChatService::class),
     $c->get(LeadRepository::class),
     $c->get(SettingsRepository::class),
+    $c->get(RateLimiter::class),
     $c->get(Config::class),
 ));
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
@@ -158,6 +161,7 @@ $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(SettingsRepository::class),
     $c->get(LeadRepository::class),
     $c->get(ComplianceService::class),
+    $c->get(RateLimiter::class),
     $c->get(Database::class),
     $c->get(Config::class),
 ));

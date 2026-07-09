@@ -16,6 +16,7 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
 </div>
 
 <form class="stack" method="post" action="/admin/privacy" style="max-width:none">
+  <?= csrf_field() ?>
   <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
 
     <!-- Startup form -->
@@ -83,6 +84,7 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
     </form>
     <form method="post" action="/admin/privacy/erase" style="display:flex;gap:8px;align-items:end"
           onsubmit="return confirm('Permanently erase ALL data for this visitor? This cannot be undone.')">
+      <?= csrf_field() ?>
       <div class="field" style="margin:0;flex:1"><label>Erase all data for visitor</label>
         <input type="text" name="visitor_id" placeholder="visitor id" required></div>
       <button class="btn" style="background:linear-gradient(135deg,#ef4444,#b91c1c)" type="submit">Erase</button>
