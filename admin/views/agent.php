@@ -27,14 +27,18 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
     <div class="card">
       <h3>Model &amp; budget</h3>
       <div class="field"><label>Chat provider</label>
-        <select name="chat_provider">
+        <select name="chat_provider" id="chat_provider">
           <?php foreach (['gemini' => 'Gemini (Flash — lowest cost)', 'openai' => 'OpenAI', 'anthropic' => 'Anthropic (Claude)'] as $k => $lbl): ?>
             <option value="<?= $k ?>" <?= ($agent['chat_provider'] ?? '') === $k ? 'selected' : '' ?>><?= e($lbl) ?></option>
           <?php endforeach; ?>
         </select></div>
       <div class="field" style="margin-top:14px"><label>Chat model</label>
-        <input type="text" name="chat_model" value="<?= $val('chat_model') ?>" placeholder="gemini-flash-latest">
-        <div class="hint">Leave blank to use the .env default. Resolved against the provider at runtime.</div></div>
+        <select name="chat_model" id="chat_model" data-current="<?= $val('chat_model') ?>">
+          <?php if ($val('chat_model') !== ''): ?>
+            <option value="<?= $val('chat_model') ?>" selected><?= $val('chat_model') ?></option>
+          <?php endif; ?>
+        </select>
+        <div class="hint" id="chat_model_hint">Models are fetched live from the provider using your API key.</div></div>
       <div class="row" style="margin-top:14px">
         <div class="field"><label>Temperature</label>
           <input type="number" step="0.05" min="0" max="1" name="temperature" value="<?= $val('temperature', '0.30') ?>"></div>
@@ -55,7 +59,17 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
       </div>
       <div class="row" style="margin-top:14px">
         <div class="field"><label>Launcher icon</label>
-          <input type="text" name="theme_launcher" value="<?= $tval('launcher', '💬') ?>"></div>
+          <?php
+            $currentIcon = $theme['launcher'] ?? '💬';
+            $icons = ['💬', '💭', '🗨️', '🤖', '👋', '✨', '🎧', '📞', '💡', '❓', '🛎️', '😊', '🙋', '💁', '🧑‍💻'];
+            if (!in_array($currentIcon, $icons, true)) { array_unshift($icons, $currentIcon); }
+          ?>
+          <select name="theme_launcher" id="theme_launcher" style="font-size:18px">
+            <?php foreach ($icons as $ic): ?>
+              <option value="<?= e($ic) ?>" <?= $ic === $currentIcon ? 'selected' : '' ?>><?= e($ic) ?></option>
+            <?php endforeach; ?>
+          </select>
+          <div class="hint">Shown as the floating chat button on your site.</div></div>
         <div class="field"><label>Position</label>
           <select name="theme_position">
             <option value="right" <?= ($theme['position'] ?? 'right') === 'right' ? 'selected' : '' ?>>Bottom right</option>
@@ -78,3 +92,61 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
 
   <div><button class="btn" type="submit">Save settings</button></div>
 </form>
+
+<script>
+(function () {
+  var providerEl = document.getElementById('chat_provider');
+  var modelEl = document.getElementById('chat_model');
+  var hintEl = document.getElementById('chat_model_hint');
+  var current = modelEl.getAttribute('data-current') || '';
+
+  function opt(value, label, selected) {
+    var o = document.createElement('option');
+    o.value = value; o.textContent = label; if (selected) o.selected = true;
+    return o;
+  }
+
+  function load() {
+    var provider = providerEl.value;
+    hintEl.textContent = 'Fetching ' + provider + ' models…';
+    modelEl.innerHTML = '';
+    modelEl.appendChild(opt('', 'Loading…', true));
+
+    fetch('/admin/api/models?provider=' + encodeURIComponent(provider), { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var models = data.models || [];
+        modelEl.innerHTML = '';
+
+        if (!models.length) {
+          hintEl.textContent = data.error
+            ? ('Could not list models (' + data.error + '). Check the ' + provider + ' API key in .env.')
+            : 'No chat models returned for this key.';
+          modelEl.appendChild(opt(current, current || '(add API key to list models)', true));
+          return;
+        }
+
+        var found = false;
+        models.forEach(function (m) {
+          var label = m.hint ? (m.id + '  —  ' + m.hint) : m.id;
+          var isCur = m.id === current;
+          if (isCur) found = true;
+          modelEl.appendChild(opt(m.id, label, isCur));
+        });
+        if (current && !found) {
+          modelEl.insertBefore(opt(current, current + '  —  (current)', true), modelEl.firstChild);
+        }
+        hintEl.textContent = models.length + ' models available · hints are guidance, verify pricing with the provider.';
+      })
+      .catch(function () {
+        modelEl.innerHTML = '';
+        modelEl.appendChild(opt(current, current || '(manual entry)', true));
+        hintEl.textContent = 'Network error fetching models.';
+      });
+  }
+
+  // Switching provider invalidates the previously chosen model.
+  providerEl.addEventListener('change', function () { current = ''; load(); });
+  load();
+})();
+</script>

@@ -4,9 +4,13 @@
 FROM php:8.2-apache
 
 # System libs for the PHP extensions we use.
+# gd is required by phpoffice/phpword (DOCX handling); it needs the image libs
+# and an explicit configure step before install.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libzip-dev libonig-dev unzip git \
-    && docker-php-ext-install pdo_mysql mbstring zip \
+        libzip-dev libonig-dev libpng-dev libjpeg-dev libfreetype6-dev \
+        libxml2-dev unzip git \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring zip gd \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 

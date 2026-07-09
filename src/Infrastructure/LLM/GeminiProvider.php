@@ -41,6 +41,27 @@ final class GeminiProvider implements LLMProvider
         return 'gemini';
     }
 
+    public function listModels(): array
+    {
+        $res = $this->http->request('GET', self::BASE . "/models?key={$this->apiKey}&pageSize=1000");
+        $res->throwIfError('Gemini list models');
+        $data = $res->json();
+
+        $out = [];
+        foreach ($data['models'] ?? [] as $m) {
+            $methods = $m['supportedGenerationMethods'] ?? [];
+            if (!in_array('generateContent', $methods, true)) {
+                continue; // skip embedding / other non-chat models
+            }
+            $id = str_starts_with($m['name'] ?? '', 'models/') ? substr($m['name'], 7) : ($m['name'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $out[] = ['id' => $id, 'hint' => ModelHint::for($id)];
+        }
+        return ModelHint::sort($out);
+    }
+
     public function streamChat(array $messages, array $options, callable $onToken): Usage
     {
         $model = $options['model'] ?? $this->defaultModel;

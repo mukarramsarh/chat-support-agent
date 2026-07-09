@@ -41,6 +41,23 @@ final class AnthropicProvider implements LLMProvider
         return 'anthropic';
     }
 
+    public function listModels(): array
+    {
+        $res = $this->http->request('GET', self::BASE . '/models?limit=1000', $this->headers());
+        $res->throwIfError('Anthropic list models');
+        $data = $res->json();
+
+        $out = [];
+        foreach ($data['data'] ?? [] as $m) {
+            $id = $m['id'] ?? '';
+            if ($id === '') {
+                continue;
+            }
+            $out[] = ['id' => $id, 'hint' => ModelHint::for($id)];
+        }
+        return ModelHint::sort($out);
+    }
+
     private function headers(): array
     {
         return [

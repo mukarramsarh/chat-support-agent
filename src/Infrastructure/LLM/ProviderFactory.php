@@ -47,6 +47,16 @@ final class ProviderFactory
         return $this->chatCache[$provider] = $instance;
     }
 
+    /**
+     * Live list of chat models the given provider's key can use.
+     *
+     * @return array<int,array{id:string,hint:string}>
+     */
+    public function listModels(string $provider): array
+    {
+        return $this->chat($provider)->listModels();
+    }
+
     /** The cheap model used for rerank / summarize / eval / memory extraction. */
     public function utility(): LLMProvider
     {

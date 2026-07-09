@@ -32,6 +32,7 @@ return function (Router $router, Container $container): void {
     $router->get('/admin', [AdminController::class, 'dashboard'], ['admin']);
     $router->get('/admin/agent', [AdminController::class, 'agent'], ['admin']);
     $router->post('/admin/agent', [AdminController::class, 'saveAgent'], ['admin']);
+    $router->get('/admin/api/models', [AdminController::class, 'models'], ['admin']);
     $router->get('/admin/knowledge', [AdminController::class, 'knowledge'], ['admin']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);

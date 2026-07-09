@@ -92,6 +92,7 @@ $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(AgentRepository::class),
     $c->get(UsageRepository::class),
     $c->get(VectorStoreFactory::class),
+    $c->get(ProviderFactory::class),
     $c->get(Database::class),
     $c->get(Config::class),
 ));

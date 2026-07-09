@@ -35,6 +35,27 @@ final class OpenAIProvider implements LLMProvider
         return 'openai';
     }
 
+    public function listModels(): array
+    {
+        $res = $this->http->request('GET', self::BASE . '/models', $this->headers());
+        $res->throwIfError('OpenAI list models');
+        $data = $res->json();
+
+        $out = [];
+        foreach ($data['data'] ?? [] as $m) {
+            $id = $m['id'] ?? '';
+            // Keep chat-capable families; drop embeddings/audio/image/moderation.
+            if (!preg_match('/^(gpt-|chatgpt|o\d)/i', $id)) {
+                continue;
+            }
+            if (preg_match('/(embedding|whisper|tts|dall-e|image|audio|realtime|moderation|transcribe|search|instruct)/i', $id)) {
+                continue;
+            }
+            $out[] = ['id' => $id, 'hint' => ModelHint::for($id)];
+        }
+        return ModelHint::sort($out);
+    }
+
     private function headers(): array
     {
         return ['Authorization' => "Bearer {$this->apiKey}"];

@@ -9,10 +9,12 @@ use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
 use SupportAI\Support\View;
+use Throwable;
 
 /**
  * The admin panel controller. Renders server-side views (no build step) and
@@ -28,6 +30,7 @@ final class AdminController
         private AgentRepository $agents,
         private UsageRepository $usage,
         private VectorStoreFactory $vectors,
+        private ProviderFactory $providers,
         private Database $db,
         private Config $config,
     ) {
@@ -144,6 +147,23 @@ final class AdminController
             'theme'             => $theme,
         ]);
         Response::redirect('/admin/agent?saved=1');
+    }
+
+    /** JSON: live chat models for the chosen provider (drives the model dropdown). */
+    public function models(Request $request): void
+    {
+        $provider = (string) $request->input('provider', 'gemini');
+        if (!in_array($provider, ['gemini', 'openai', 'anthropic'], true)) {
+            Response::json(['models' => [], 'error' => 'Unknown provider']);
+            return;
+        }
+        try {
+            Response::json(['provider' => $provider, 'models' => $this->providers->listModels($provider)]);
+        } catch (Throwable $e) {
+            // Missing/invalid key or network — return empty list + reason so the
+            // UI can fall back to a free-text entry instead of breaking.
+            Response::json(['models' => [], 'error' => $e->getMessage()]);
+        }
     }
 
     public function knowledge(Request $request): void

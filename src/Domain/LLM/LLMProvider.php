@@ -15,6 +15,15 @@ interface LLMProvider
     public function name(): string;
 
     /**
+     * List chat-capable models available to THIS api key, fetched live from the
+     * provider. Powers the admin model dropdown so users only ever pick a model
+     * their key can actually use.
+     *
+     * @return array<int,array{id:string,hint:string}>
+     */
+    public function listModels(): array;
+
+    /**
      * Stream a chat completion. $onToken is invoked with each text delta as it
      * arrives. Returns the final Usage for cost accounting.
      *
