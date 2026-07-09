@@ -118,12 +118,39 @@
 - [x] Validation (required, email); PII stored encrypted; respects retention/erasure
 - [ ] Show decrypted lead in the session detail view (nice-to-have)
 
+## 14. Second shortcode — launch chat from a link/button — ⬜
+Two ways to embed, sharing one widget instance:
+- [x] Shortcode A (exists): auto floating launcher — `<script src="…/widget.js" data-agent="…">`
+- [ ] Shortcode B (new): a clickable **link/button** that opens the chat on click, for placing inline (e.g. "Chat with us" in a nav/CTA)
+- [ ] Widget exposes a global open API — `window.supportAI.open()` / `.close()` / `.toggle()`
+- [ ] Any element can be a trigger via a data attribute — e.g. `<a href="#" data-support-ai-open>Chat with us</a>` (delegated click handler)
+- [ ] Option to hide the default floating launcher when a custom trigger is used (`data-launcher="off"`)
+- [ ] Admin embed section documents BOTH shortcodes with copy-paste snippets
+
 ---
 
-### Suggested build order
-1. **RAG flow (#8)** ← in progress (makes knowledge actually work) + memory (#7) + smart tokens (#12)
-2. Conversation history + statuses (#5, #6)
-3. Startup form (#13) + its consent (part of #11)
-4. Security pass (#10) + KSA compliance core (#11: consent, redaction, erasure, retention, RTL)
-5. Unit tests (#4) + standards/CI (#3)
-6. Web installer + onboarding (#1, #2)
+### Delivery phases (original plan → current status)
+- **Phase 2** — ingestion pipeline (PDF/DOCX/URL/text → chunk → embed via cron) + hybrid retrieval + pre-answer evaluation loop.
+  → ingestion ✅ (synchronous; **cron/job_queue path ⬜**); retrieval ✅ vector-only (**hybrid FULLTEXT+vector ⬜**); **pre-answer eval loop ⬜**
+- **Phase 3** — long-term memory (summaries + extracted facts).
+  → relevant-message recall ✅; **rolling summaries ⬜**, **fact extraction into `memories` ⬜**
+- **Phase 4** — offline golden-Q&A eval harness in the admin.
+  → DB tables exist (`eval_sets`/`eval_cases`/`eval_runs`/`eval_results`) ✅; **admin UI + runner ⬜**
+- **Phase 5** — rate limiting, domain allowlist, key encryption at rest, prompt-injection hardening.
+  → rate limiting ✅, domain allowlist ✅, key encryption at rest ✅; **prompt-injection hardening ⬜**
+
+---
+
+### Suggested build order (remaining)
+Done so far: RAG (#8), memory recall (#7), history+statuses (#5/#6), startup form (#13),
+KSA compliance core (#11), security pass (#10), unit tests (#4).
+
+Next up:
+1. **Pre-answer evaluation loop** (Phase 2) — grounded/confidence self-check, one capped retry, human-handoff fallback
+2. **Hybrid retrieval** (Phase 2) — FULLTEXT prefilter + vector; optional cheap rerank
+3. **Second shortcode: launch-by-link/button (#14)** + `window.supportAI.open()` API
+4. **Long-term memory** (Phase 3) — rolling summaries + fact extraction into `memories`
+5. **Cron/job_queue ingestion** (Phase 2) — background parse/embed for large files
+6. **Offline eval harness UI** (Phase 4, #4-adjacent)
+7. **Prompt-injection hardening** (Phase 5, #10)
+8. **Web installer + onboarding wizard** (#1, #2); static analysis + CI (#3)
