@@ -12,6 +12,8 @@ use SupportAI\Application\Chat\ChatService;
 use SupportAI\Application\Chat\ContextRetriever;
 use SupportAI\Application\Chat\MemoryService;
 use SupportAI\Application\Chat\RagRetriever;
+use SupportAI\Application\Compliance\ComplianceService;
+use SupportAI\Application\Compliance\PrivacyFilter;
 use SupportAI\Application\Ingestion\Chunker;
 use SupportAI\Application\Ingestion\IngestionService;
 use SupportAI\Application\Ingestion\TextExtractor;
@@ -24,12 +26,15 @@ use SupportAI\Infrastructure\LLM\Pricing;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\Persistence\AuditRepository;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\DocumentRepository;
+use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
+use SupportAI\Support\PiiRedactor;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
 use SupportAI\Support\Container;
@@ -64,6 +69,15 @@ $c->set(AdminUserRepository::class, fn (Container $c) => new AdminUserRepository
 $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get(Database::class), $c->get(Pricing::class)));
 $c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
 $c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
+$c->set(LeadRepository::class, fn (Container $c) => new LeadRepository($c->get(Database::class), $c->get(Crypto::class)));
+$c->set(AuditRepository::class, fn (Container $c) => new AuditRepository($c->get(Database::class)));
+
+// ── Compliance / privacy ──
+$c->set(PiiRedactor::class, fn () => new PiiRedactor());
+$c->set(PrivacyFilter::class, fn (Container $c) => new PrivacyFilter($c->get(SettingsRepository::class), $c->get(PiiRedactor::class)));
+$c->set(ComplianceService::class, fn (Container $c) => new ComplianceService(
+    $c->get(Database::class), $c->get(LeadRepository::class), $c->get(AuditRepository::class), $c->get(SettingsRepository::class)
+));
 
 // ── Providers & vector store ──
 $c->set(ProviderFactory::class, fn (Container $c) => new ProviderFactory($c->get(Config::class), $c->get(HttpClient::class)));
@@ -77,6 +91,7 @@ $c->set(ContextRetriever::class, fn (Container $c) => new RagRetriever(
     $c->get(VectorStoreFactory::class),
     $c->get(ChunkRepository::class),
     $c->get(UsageRepository::class),
+    $c->get(PrivacyFilter::class),
     $c->get(Config::class),
     $c->get(Logger::class),
 ));
@@ -102,6 +117,7 @@ $c->set(ChatService::class, fn (Container $c) => new ChatService(
     $c->get(ProviderFactory::class),
     $c->get(ContextRetriever::class),
     $c->get(MemoryService::class),
+    $c->get(PrivacyFilter::class),
     $c->get(ConversationRepository::class),
     $c->get(MessageRepository::class),
     $c->get(UsageRepository::class),
@@ -114,10 +130,13 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
     $c->get(AgentRepository::class),
     $c->get(ConversationRepository::class),
     $c->get(ChatService::class),
+    $c->get(LeadRepository::class),
+    $c->get(SettingsRepository::class),
     $c->get(Config::class),
 ));
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
     $c->get(AgentRepository::class),
+    $c->get(SettingsRepository::class),
     $c->get(Config::class),
 ));
 $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
@@ -136,6 +155,9 @@ $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(ProviderFactory::class),
     $c->get(ConversationRepository::class),
     $c->get(MessageRepository::class),
+    $c->get(SettingsRepository::class),
+    $c->get(LeadRepository::class),
+    $c->get(ComplianceService::class),
     $c->get(Database::class),
     $c->get(Config::class),
 ));

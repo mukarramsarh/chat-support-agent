@@ -23,6 +23,8 @@ if ($expected === '' || !hash_equals($expected, (string) $given)) {
     return;
 }
 
-// Phase 2: drain job_queue (parse → embed → memory extraction).
 header('Content-Type: text/plain');
-echo "OK — no jobs registered yet.\n";
+
+// Storage-limitation: purge data past the retention window (PDPL).
+$purged = $c->get(SupportAI\Application\Compliance\ComplianceService::class)->purge();
+echo "OK — retention purge removed {$purged} conversation(s).\n";

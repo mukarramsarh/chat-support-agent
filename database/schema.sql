@@ -281,6 +281,41 @@ CREATE TABLE IF NOT EXISTS rate_limits (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ─────────────────────────────────────────────────────────────────────────
+--  leads · startup-form submissions (PII) — KSA PDPL sensitive
+--  `data_encrypted` holds the field values encrypted at rest (Crypto). Consent
+--  is captured explicitly with the exact notice text + timestamp.
+-- ─────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS leads (
+    id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    agent_id        BIGINT UNSIGNED NOT NULL,
+    conversation_id BIGINT UNSIGNED NULL,
+    visitor_id      VARCHAR(64)   NOT NULL,
+    data_encrypted  TEXT          NOT NULL,            -- encrypted JSON {name,email,phone,company}
+    consent         TINYINT(1)    NOT NULL DEFAULT 0,
+    consent_text    VARCHAR(1000) NULL,                -- exact notice the user agreed to
+    consented_at    TIMESTAMP     NULL,
+    created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_lead_agent_visitor (agent_id, visitor_id),
+    CONSTRAINT fk_lead_agent FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────────────────
+--  audit_log · compliance trail (data exports, erasures, admin logins)
+-- ─────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS audit_log (
+    id          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    admin_id    BIGINT UNSIGNED NULL,
+    action      VARCHAR(60)   NOT NULL,                -- data.export | data.erase | admin.login | ...
+    subject     VARCHAR(190)  NULL,                    -- e.g. visitor id acted upon
+    detail      JSON          NULL,
+    ip          VARCHAR(45)   NULL,
+    created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    KEY idx_audit_action (action, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ─────────────────────────────────────────────────────────────────────────
 --  Offline evaluation harness (admin-triggered regression testing)
 -- ─────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS eval_sets (

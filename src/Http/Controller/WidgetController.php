@@ -7,6 +7,7 @@ namespace SupportAI\Http\Controller;
 use SupportAI\Http\Request;
 use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Support\Config;
 
 /**
@@ -18,6 +19,7 @@ final class WidgetController
 {
     public function __construct(
         private AgentRepository $agents,
+        private SettingsRepository $settings,
         private Config $config,
     ) {
     }
@@ -32,6 +34,26 @@ final class WidgetController
         }
 
         $theme = $agent['theme'] ?: [];
+        $form = $this->settings->startupForm();
+        $compliance = $this->settings->compliance();
+
+        // Public form config: expose only enabled fields + consent copy.
+        $publicForm = null;
+        if (!empty($form['enabled'])) {
+            $publicForm = [
+                'title'            => $form['title'] ?? 'Before we start',
+                'subtitle'         => $form['subtitle'] ?? '',
+                'consent_required' => (bool) ($form['consent_required'] ?? true),
+                'consent_text'     => $form['consent_text'] ?? '',
+                'privacy_url'      => $compliance['privacy_url'] ?? '',
+                'fields'           => array_values(array_filter(
+                    array_map(static fn ($f) => empty($f['enabled']) ? null : [
+                        'key' => $f['key'], 'label' => $f['label'], 'required' => (bool) ($f['required'] ?? false),
+                    ], $form['fields'] ?? []),
+                )),
+            ];
+        }
+
         Response::json([
             'agent' => [
                 'public_id'       => $agent['public_id'],
@@ -47,7 +69,9 @@ final class WidgetController
                     'subtitle'  => $theme['subtitle'] ?? 'Typically replies instantly',
                 ],
             ],
-            'api_base' => $this->config->string('app.url'),
+            'startup_form' => $publicForm,
+            'rtl'          => (bool) ($compliance['rtl'] ?? false),
+            'api_base'     => $this->config->string('app.url'),
         ], 200, ['Access-Control-Allow-Origin' => '*']);
     }
 

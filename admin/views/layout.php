@@ -87,6 +87,7 @@
           'knowledge'     => ['/admin/knowledge', '📚', 'Knowledge'],
           'conversations' => ['/admin/conversations', '💬', 'Conversations'],
           'costs'         => ['/admin/costs', '📈', 'Cost & usage'],
+          'privacy'       => ['/admin/privacy', '🔒', 'Privacy & form'],
         ];
         foreach ($nav as $key => [$href, $icon, $label]):
       ?>

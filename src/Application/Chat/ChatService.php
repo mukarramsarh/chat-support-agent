@@ -30,6 +30,7 @@ final class ChatService
         private ProviderFactory $providers,
         private ContextRetriever $retriever,
         private MemoryService $memory,
+        private \SupportAI\Application\Compliance\PrivacyFilter $privacy,
         private ConversationRepository $conversations,
         private MessageRepository $messages,
         private UsageRepository $usage,
@@ -157,10 +158,12 @@ final class ChatService
         // Memory: relevant older messages (recall) + recent verbatim turns.
         $memory = $this->memory->build((int) $conversation['id'], $conversation['visitor_id'] ?? null, $userText);
 
+        // All user-originated content is PII-redacted before it goes to the
+        // (external) model; the untouched originals remain in the DB transcript.
         if ($memory['relevant'] !== []) {
             $recall = "Relevant earlier messages from this user (for context):\n";
             foreach ($memory['relevant'] as $m) {
-                $recall .= '- ' . ($m['role'] === 'assistant' ? 'You' : 'User') . ': ' . $m['content'] . "\n";
+                $recall .= '- ' . ($m['role'] === 'assistant' ? 'You' : 'User') . ': ' . $this->privacy->outbound($m['content']) . "\n";
             }
             $messages[] = Message::system(trim($recall));
         }
@@ -171,9 +174,10 @@ final class ChatService
         // Recent verbatim window. The current user turn was persisted before this
         // call, so it is already the final entry — we must NOT append it again.
         foreach ($memory['recent'] as $turn) {
+            $content = $this->privacy->outbound($turn['content']);
             $messages[] = $turn['role'] === 'assistant'
-                ? Message::assistant($turn['content'])
-                : Message::user($turn['content']);
+                ? Message::assistant($content)
+                : Message::user($content);
         }
 
         return $messages;

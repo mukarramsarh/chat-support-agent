@@ -24,6 +24,7 @@ return function (Router $router, Container $container): void {
 
     $router->post('/api/chat/message', [ChatController::class, 'message']);       // SSE stream
     $router->post('/api/chat/feedback', [ChatController::class, 'feedback']);
+    $router->post('/api/chat/lead', [ChatController::class, 'lead']);             // startup form
 
     // ── Admin area (session-guarded) ──
     $router->get('/admin/login', [AdminController::class, 'loginForm']);
@@ -43,4 +44,8 @@ return function (Router $router, Container $container): void {
     $router->get('/admin/conversations/{id}', [AdminController::class, 'conversationDetail'], ['admin']);
     $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);
+    $router->get('/admin/privacy', [AdminController::class, 'privacy'], ['admin']);
+    $router->post('/admin/privacy', [AdminController::class, 'savePrivacy'], ['admin']);
+    $router->post('/admin/privacy/erase', [AdminController::class, 'eraseVisitor'], ['admin']);
+    $router->get('/admin/privacy/export', [AdminController::class, 'exportVisitor'], ['admin']);
 };

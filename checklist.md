@@ -85,17 +85,18 @@
 - [ ] Security headers (CSP for admin), password policy, brute-force lockout
 - [ ] Upload validation (MIME sniff, size, extension) — partial
 
-## 11. KSA compliance (PDPL / SDAIA) — 0% compromise — ⬜
-- [ ] **Consent**: startup form + widget show a clear privacy notice + explicit consent before collecting PII; store consent + timestamp
-- [ ] **Purpose limitation & transparency**: state what data is collected and why
-- [ ] **Cross-border transfer**: LLM/vector providers (OpenAI/Anthropic/Pinecone) are outside KSA — flag this; provide config to restrict, and **PII redaction before sending text to any external LLM**
-- [ ] **Data residency option**: allow MySQL-only vector store (PHP-cosine) to keep all data on the KSA host; document provider choices
-- [ ] **Data subject rights**: erase-by-visitor (delete conversations/memories/PII), export-my-data
-- [ ] **Retention policy**: configurable auto-purge of conversations/PII after N days
-- [ ] **Audit log** of admin access + data exports
-- [ ] **Arabic language + RTL** support (widget + admin), Hijri-aware dates where shown
+## 11. KSA compliance (PDPL / SDAIA) — 0% compromise — 🟡
+- [x] **Consent**: startup form + widget show privacy notice + explicit consent before collecting PII; consent + timestamp + exact text stored
+- [x] **Cross-border transfer**: **PII redaction before external LLM/embeddings** (PrivacyFilter + PiiRedactor: email/phone/ID/card/IBAN), toggle in admin
+- [x] **Data residency option**: `VECTOR_DRIVER=php` keeps all vectors in local MySQL (no external vector store); documented
+- [x] **Data subject rights**: erase-by-visitor + export-my-data (ComplianceService), audited
+- [x] **Retention policy**: configurable auto-purge (cron / web-cron)
+- [x] **Audit log** of erasures/exports (audit_log table)
+- [x] **PII encrypted at rest** (leads via Crypto)
+- [x] **RTL (Arabic)** widget layout toggle
+- [ ] Admin RTL/Arabic localisation; Hijri dates
 - [ ] Content safety aligned with local norms
-- [ ] ⚠ Legal review required — code enables compliance but is not legal advice
+- [ ] ⚠ Legal/DPO review required — code enables compliance but is not legal advice
 
 ## 12. Smart token usage — 🟡
 - [x] Cheap default model (Gemini Flash); per-call cost logging; monthly budget gate
@@ -107,12 +108,12 @@
 - [ ] Answer cache for repeat questions
 - [ ] Skip/downgrade model for trivial messages
 
-## 13. Startup user form (admin-designed, enable/disable) — ⬜
-- [ ] Admin builder: toggle form on/off; choose fields (name, email, phone, company) + required flags
-- [ ] Consent checkbox tied to KSA notice (item 11)
-- [ ] Widget renders the form before chat when enabled; store as lead on the conversation
-- [ ] Validation (email/phone); show leads in the session detail
-- [ ] Store PII encrypted; respect retention/erasure
+## 13. Startup user form (admin-designed, enable/disable) — ✅
+- [x] Admin builder (/admin/privacy): toggle on/off; per-field enable + required (name/email/phone/company) + labels
+- [x] Consent checkbox tied to KSA notice + privacy URL
+- [x] Widget renders the form before chat when enabled; stored as a lead on the conversation
+- [x] Validation (required, email); PII stored encrypted; respects retention/erasure
+- [ ] Show decrypted lead in the session detail view (nice-to-have)
 
 ---
 

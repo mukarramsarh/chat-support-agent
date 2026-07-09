@@ -40,8 +40,9 @@ switch ($command) {
         break;
 
     case 'cron':
-        // Phase 2 registers job handlers here; for now this is a no-op tick.
-        echo "cron: no jobs registered yet (ingestion lands in Phase 2).\n";
+        // Storage-limitation: purge data past the retention window.
+        $purged = $c->get(SupportAI\Application\Compliance\ComplianceService::class)->purge();
+        echo "cron: retention purge removed {$purged} conversation(s).\n";
         break;
 
     default:

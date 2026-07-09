@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SupportAI\Application\Chat;
 
+use SupportAI\Application\Compliance\PrivacyFilter;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
@@ -33,6 +34,7 @@ final class RagRetriever implements ContextRetriever
         private VectorStoreFactory $vectors,
         private ChunkRepository $chunks,
         private UsageRepository $usage,
+        private PrivacyFilter $privacy,
         private Config $config,
         private Logger $logger,
     ) {
@@ -50,9 +52,10 @@ final class RagRetriever implements ContextRetriever
         $minScore = $this->config->float('budget.min_score', 0.20);
 
         try {
-            // 1) Embed the query (cheap) and record the spend.
+            // 1) Embed the query (cheap) and record the spend. Redact PII first
+            //    so personal data isn't sent to the (external) embedding provider.
             $embedder = $this->providers->embeddings();
-            $embedded = $embedder->embed([$query]);
+            $embedded = $embedder->embed([$this->privacy->outbound($query)]);
             $vector = $embedded['vectors'][0] ?? [];
             $this->usage->record($embedder->name(), $embedder->model(), 'embed', $embedded['usage'], $agentId);
             if ($vector === []) {

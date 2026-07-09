@@ -9,9 +9,12 @@ use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
+use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
+use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
@@ -35,6 +38,9 @@ final class AdminController
         private ProviderFactory $providers,
         private ConversationRepository $conversations,
         private MessageRepository $messages,
+        private SettingsRepository $settings,
+        private LeadRepository $leads,
+        private ComplianceService $compliance,
         private Database $db,
         private Config $config,
     ) {
@@ -238,6 +244,73 @@ final class AdminController
             'byOperation' => $this->usage->spendByOperation(30),
             'monthSpend'  => $this->usage->monthToDateSpend(),
         ]);
+    }
+
+    // ── Privacy & compliance (KSA PDPL) ─────────────────────────────────────
+
+    public function privacy(Request $request): void
+    {
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+        $this->page('privacy', 'Privacy & startup form', [
+            'form'       => $this->settings->startupForm(),
+            'compliance' => $this->settings->compliance(),
+            'flash'      => $flash,
+        ]);
+    }
+
+    public function savePrivacy(Request $request): void
+    {
+        // Rebuild the startup-form config from the posted controls.
+        $fieldKeys = ['name', 'email', 'phone', 'company'];
+        $fields = [];
+        foreach ($fieldKeys as $k) {
+            $fields[] = [
+                'key'      => $k,
+                'label'    => (string) $request->input("label_{$k}", ucfirst($k)),
+                'enabled'  => (bool) $request->input("enabled_{$k}", false),
+                'required' => (bool) $request->input("required_{$k}", false),
+            ];
+        }
+        $this->settings->setJson('startup_form', [
+            'enabled'          => (bool) $request->input('form_enabled', false),
+            'title'            => (string) $request->input('form_title', 'Before we start'),
+            'subtitle'         => (string) $request->input('form_subtitle', ''),
+            'fields'           => $fields,
+            'consent_required' => (bool) $request->input('consent_required', false),
+            'consent_text'     => (string) $request->input('consent_text', ''),
+        ]);
+        $this->settings->setJson('compliance', [
+            'pii_redaction'  => (bool) $request->input('pii_redaction', false),
+            'retention_days' => max(0, (int) $request->input('retention_days', 0)),
+            'rtl'            => (bool) $request->input('rtl', false),
+            'privacy_url'    => (string) $request->input('privacy_url', ''),
+        ]);
+        $_SESSION['flash'] = ['type' => 'ok', 'message' => 'Privacy settings saved.'];
+        Response::redirect('/admin/privacy');
+    }
+
+    public function eraseVisitor(Request $request): void
+    {
+        $vid = trim((string) $request->input('visitor_id', ''));
+        if ($vid !== '') {
+            $counts = $this->compliance->erase($vid, (int) ($_SESSION['admin_id'] ?? 0), $request->ip());
+            $_SESSION['flash'] = ['type' => 'ok', 'message' => "Erased data for {$vid}: " . json_encode($counts)];
+        }
+        Response::redirect('/admin/privacy');
+    }
+
+    public function exportVisitor(Request $request): void
+    {
+        $vid = trim((string) $request->input('visitor_id', ''));
+        if ($vid === '') {
+            Response::redirect('/admin/privacy');
+            return;
+        }
+        $data = $this->compliance->export($vid, (int) ($_SESSION['admin_id'] ?? 0), $request->ip());
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="export-' . preg_replace('/[^a-z0-9\-]/i', '_', $vid) . '.json"');
+        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────
