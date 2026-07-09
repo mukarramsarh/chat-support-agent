@@ -29,6 +29,7 @@ final class ChatService
     public function __construct(
         private ProviderFactory $providers,
         private ContextRetriever $retriever,
+        private MemoryService $memory,
         private ConversationRepository $conversations,
         private MessageRepository $messages,
         private UsageRepository $usage,
@@ -145,14 +146,24 @@ final class ChatService
         if ($context->contextBlock !== '') {
             $messages[] = Message::system("KNOWLEDGE:\n" . $context->contextBlock, cacheable: true);
         }
+
+        // Memory: relevant older messages (recall) + recent verbatim turns.
+        $memory = $this->memory->build((int) $conversation['id'], $conversation['visitor_id'] ?? null, $userText);
+
+        if ($memory['relevant'] !== []) {
+            $recall = "Relevant earlier messages from this user (for context):\n";
+            foreach ($memory['relevant'] as $m) {
+                $recall .= '- ' . ($m['role'] === 'assistant' ? 'You' : 'User') . ': ' . $m['content'] . "\n";
+            }
+            $messages[] = Message::system(trim($recall));
+        }
         if (!empty($conversation['summary'])) {
             $messages[] = Message::system('Conversation so far (summary): ' . $conversation['summary']);
         }
 
-        // Recent verbatim history window. The current user turn was persisted
-        // before this call, so it is already the final entry here — we must NOT
-        // append $userText again or the model sees the question twice.
-        foreach ($this->messages->recentWindow((int) $conversation['id'], 10) as $turn) {
+        // Recent verbatim window. The current user turn was persisted before this
+        // call, so it is already the final entry — we must NOT append it again.
+        foreach ($memory['recent'] as $turn) {
             $messages[] = $turn['role'] === 'assistant'
                 ? Message::assistant($turn['content'])
                 : Message::user($turn['content']);

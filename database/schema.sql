@@ -176,6 +176,7 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at      TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_msg_conv (conversation_id, id),
+    FULLTEXT KEY ft_msg_content (content),   -- powers relevant-memory recall
     CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

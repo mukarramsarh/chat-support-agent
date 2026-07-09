@@ -15,9 +15,10 @@ final class MessageRepository
 
     /**
      * The most recent turns for a conversation, oldest-first, capped to a window.
-     * Older turns are represented by the conversation summary instead.
+     * Older turns are represented by the conversation summary + relevant-memory
+     * retrieval instead. Includes id so callers can compute the window boundary.
      *
-     * @return array<int,array<string,mixed>>
+     * @return array<int,array{id:int,role:string,content:string}>
      */
     public function recentWindow(int $conversationId, int $limit = 10): array
     {
@@ -25,12 +26,46 @@ final class MessageRepository
         // as a string without erroring, and casting makes it injection-safe.
         $limit = max(1, min(100, $limit));
         $rows = $this->db->all(
-            'SELECT role, content FROM messages
+            'SELECT id, role, content FROM messages
               WHERE conversation_id = :id AND role IN (\'user\',\'assistant\')
            ORDER BY id DESC LIMIT ' . $limit,
             ['id' => $conversationId]
         );
         return array_reverse($rows);
+    }
+
+    /**
+     * Semantically-relevant OLDER messages from the SAME visitor (across their
+     * past conversations), matched by MySQL FULLTEXT against the current query.
+     * This is the cheap (no-token) "relevant memory" recall.
+     *
+     * Degrades safely: returns [] if the FULLTEXT index is missing or the query
+     * has no matchable terms (natural-language mode drops very common words).
+     *
+     * @return array<int,array{role:string,content:string,created_at:string}>
+     */
+    public function relevantOlder(string $visitorId, string $query, int $beforeId, int $limit = 3): array
+    {
+        if (trim($query) === '' || $visitorId === '') {
+            return [];
+        }
+        $limit = max(1, min(10, $limit));
+        try {
+            return $this->db->all(
+                "SELECT m.role, m.content, m.created_at
+                   FROM messages m
+                   JOIN conversations c ON c.id = m.conversation_id
+                  WHERE c.visitor_id = :vid
+                    AND m.role IN ('user','assistant')
+                    AND m.id < :before
+                    AND MATCH(m.content) AGAINST (:q IN NATURAL LANGUAGE MODE)
+               ORDER BY MATCH(m.content) AGAINST (:q2 IN NATURAL LANGUAGE MODE) DESC
+                  LIMIT " . $limit,
+                ['vid' => $visitorId, 'before' => $beforeId, 'q' => $query, 'q2' => $query]
+            );
+        } catch (\Throwable) {
+            return []; // no FULLTEXT index / unsupported — memory recall is optional
+        }
     }
 
     public function addUser(int $conversationId, string $content): int

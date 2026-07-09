@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 use SupportAI\Application\Chat\ChatService;
 use SupportAI\Application\Chat\ContextRetriever;
+use SupportAI\Application\Chat\MemoryService;
 use SupportAI\Application\Chat\RagRetriever;
 use SupportAI\Application\Ingestion\Chunker;
 use SupportAI\Application\Ingestion\IngestionService;
@@ -96,9 +97,11 @@ $c->set(IngestionService::class, fn (Container $c) => new IngestionService(
 ));
 
 // ── Application services ──
+$c->set(MemoryService::class, fn (Container $c) => new MemoryService($c->get(MessageRepository::class)));
 $c->set(ChatService::class, fn (Container $c) => new ChatService(
     $c->get(ProviderFactory::class),
     $c->get(ContextRetriever::class),
+    $c->get(MemoryService::class),
     $c->get(ConversationRepository::class),
     $c->get(MessageRepository::class),
     $c->get(UsageRepository::class),

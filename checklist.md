@@ -50,9 +50,10 @@
 - [ ] Manual override in admin; colored pills; dashboard counts
 
 ## 7. Intelligent chat memory (last ~3 turns + relevant old messages) — 🟡
-- [x] Recent verbatim window + rolling conversation summary (schema + wiring)
-- [ ] Keep last 3 turns verbatim
-- [ ] Retrieve relevant OLDER messages by semantic similarity (populate `memories` / embed past turns; or FULLTEXT fallback)
+- [x] Recent verbatim window (last ~3 turns) via MemoryService
+- [x] Retrieve relevant OLDER messages across the visitor's sessions (FULLTEXT recall, zero token cost; degrades safely)
+- [x] Injected into prompt as recall block; rolling summary slot wired
+- [ ] Upgrade recall to embedding-based (semantic) for small histories where FULLTEXT underperforms
 - [ ] Long-term fact extraction into `memories`, retrieved like knowledge
 - [ ] Summarize + drop old turns to cap tokens
 
