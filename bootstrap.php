@@ -10,16 +10,22 @@ declare(strict_types=1);
 
 use SupportAI\Application\Chat\ChatService;
 use SupportAI\Application\Chat\ContextRetriever;
-use SupportAI\Application\Chat\NullRetriever;
+use SupportAI\Application\Chat\RagRetriever;
+use SupportAI\Application\Ingestion\Chunker;
+use SupportAI\Application\Ingestion\IngestionService;
+use SupportAI\Application\Ingestion\TextExtractor;
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
+use SupportAI\Http\Controller\DocumentController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\LLM\Pricing;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
+use SupportAI\Infrastructure\Persistence\DocumentRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
@@ -55,6 +61,8 @@ $c->set(ConversationRepository::class, fn (Container $c) => new ConversationRepo
 $c->set(MessageRepository::class, fn (Container $c) => new MessageRepository($c->get(Database::class)));
 $c->set(AdminUserRepository::class, fn (Container $c) => new AdminUserRepository($c->get(Database::class)));
 $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get(Database::class), $c->get(Pricing::class)));
+$c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
+$c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
 
 // ── Providers & vector store ──
 $c->set(ProviderFactory::class, fn (Container $c) => new ProviderFactory($c->get(Config::class), $c->get(HttpClient::class)));
@@ -62,8 +70,30 @@ $c->set(VectorStoreFactory::class, fn (Container $c) => new VectorStoreFactory(
     $c->get(Config::class), $c->get(Database::class), $c->get(HttpClient::class), $c->get(Logger::class)
 ));
 
-// ── Retrieval seam: NullRetriever now, RagRetriever in Phase 2 ──
-$c->set(ContextRetriever::class, fn () => new NullRetriever());
+// ── Retrieval seam: RagRetriever (hybrid vector search over ingested knowledge) ──
+$c->set(ContextRetriever::class, fn (Container $c) => new RagRetriever(
+    $c->get(ProviderFactory::class),
+    $c->get(VectorStoreFactory::class),
+    $c->get(ChunkRepository::class),
+    $c->get(UsageRepository::class),
+    $c->get(Config::class),
+    $c->get(Logger::class),
+));
+
+// ── Ingestion pipeline ──
+$c->set(TextExtractor::class, fn (Container $c) => new TextExtractor($c->get(HttpClient::class)));
+$c->set(Chunker::class, fn () => new Chunker());
+$c->set(IngestionService::class, fn (Container $c) => new IngestionService(
+    $c->get(TextExtractor::class),
+    $c->get(Chunker::class),
+    $c->get(ProviderFactory::class),
+    $c->get(VectorStoreFactory::class),
+    $c->get(DocumentRepository::class),
+    $c->get(ChunkRepository::class),
+    $c->get(SettingsRepository::class),
+    $c->get(UsageRepository::class),
+    $c->get(Logger::class),
+));
 
 // ── Application services ──
 $c->set(ChatService::class, fn (Container $c) => new ChatService(
@@ -85,6 +115,14 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
 ));
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
     $c->get(AgentRepository::class),
+    $c->get(Config::class),
+));
+$c->set(DocumentController::class, fn (Container $c) => new DocumentController(
+    $c->get(IngestionService::class),
+    $c->get(AgentRepository::class),
+    $c->get(DocumentRepository::class),
+    $c->get(ChunkRepository::class),
+    $c->get(VectorStoreFactory::class),
     $c->get(Config::class),
 ));
 $c->set(AdminController::class, fn (Container $c) => new AdminController(

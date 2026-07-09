@@ -32,6 +32,9 @@ final class HttpClient
             CURLOPT_HTTPHEADER     => $this->normaliseHeaders($headers),
             CURLOPT_TIMEOUT        => $this->timeout,
             CURLOPT_CONNECTTIMEOUT => 15,
+            CURLOPT_FOLLOWLOCATION => true,  // follow http→https / www redirects
+            CURLOPT_MAXREDIRS      => 5,
+            CURLOPT_ENCODING       => '',    // accept + auto-decompress gzip/br
         ]);
         if ($payload !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, $payload);

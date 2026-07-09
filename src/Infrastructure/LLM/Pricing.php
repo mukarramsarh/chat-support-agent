@@ -52,19 +52,41 @@ final class Pricing
         return round($cost, 6);
     }
 
-    /** @return array{in:float,out:float,cached_in?:float} */
+    /**
+     * Resolve a rate by FAMILY KEYWORDS, not contiguous prefix — real model ids
+     * carry version numbers ("gemini-2.5-flash", "claude-sonnet-5") that break
+     * substring matching. Unknown models get a conservative non-zero default so
+     * the budget guardrail still accrues spend rather than silently reading $0.
+     *
+     * @return array{in:float,out:float,cached_in?:float}
+     */
     private function rateFor(string $model): array
     {
-        $model = strtolower($model);
-        // Longest matching prefix wins.
-        $best = null;
-        $bestLen = -1;
-        foreach ($this->table as $prefix => $rate) {
-            if (str_contains($model, $prefix) && strlen($prefix) > $bestLen) {
-                $best = $rate;
-                $bestLen = strlen($prefix);
-            }
+        $m = strtolower($model);
+        $has = static fn (string ...$needles): bool => array_reduce(
+            $needles, static fn (bool $c, string $x) => $c || str_contains($m, $x), false
+        );
+
+        // Embeddings.
+        if ($has('embedding')) {
+            return $this->table[$has('large') ? 'text-embedding-3-large' : 'text-embedding-3-small'];
         }
-        return $best ?? ['in' => 0.0, 'out' => 0.0];
+        // Anthropic families.
+        if ($has('opus'))   { return ['in' => 15.00, 'out' => 75.00, 'cached_in' => 1.50]; }
+        if ($has('sonnet')) { return $this->table['claude-sonnet']; }
+        if ($has('haiku'))  { return $this->table['claude-haiku']; }
+        // Gemini families.
+        if ($has('gemini', 'gemma', 'flash')) {
+            if ($has('lite'))  { return $this->table['gemini-flash-lite']; }
+            if ($has('flash')) { return $this->table['gemini-flash']; }
+            if ($has('pro'))   { return $this->table['gemini-pro']; }
+            return $this->table['gemini-flash'];
+        }
+        // OpenAI families.
+        if ($has('gpt') || preg_match('/\bo\d/', $m)) {
+            return $has('mini', 'nano') ? $this->table['gpt-4o-mini'] : $this->table['gpt-4o'];
+        }
+        // Unknown → conservative estimate (never zero).
+        return ['in' => 0.50, 'out' => 1.50];
     }
 }

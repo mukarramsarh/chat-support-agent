@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
+use SupportAI\Http\Controller\DocumentController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Http\Middleware\AdminAuth;
 use SupportAI\Http\Router;
@@ -34,6 +35,10 @@ return function (Router $router, Container $container): void {
     $router->post('/admin/agent', [AdminController::class, 'saveAgent'], ['admin']);
     $router->get('/admin/api/models', [AdminController::class, 'models'], ['admin']);
     $router->get('/admin/knowledge', [AdminController::class, 'knowledge'], ['admin']);
+    $router->post('/admin/knowledge/text', [DocumentController::class, 'addText'], ['admin']);
+    $router->post('/admin/knowledge/url', [DocumentController::class, 'addUrl'], ['admin']);
+    $router->post('/admin/knowledge/upload', [DocumentController::class, 'upload'], ['admin']);
+    $router->post('/admin/knowledge/delete', [DocumentController::class, 'delete'], ['admin']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);
 };

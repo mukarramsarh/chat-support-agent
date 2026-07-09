@@ -3,14 +3,13 @@
 # "works in Docker" == "works on the host".
 FROM php:8.2-apache
 
-# System libs for the PHP extensions we use.
-# gd is required by phpoffice/phpword (DOCX handling); it needs the image libs
-# and an explicit configure step before install.
+# PHP extensions the app actually uses at runtime:
+#   pdo_mysql (DB), mbstring (text), zip (DOCX via ZipArchive).
+# poppler-utils is an OPTIONAL pdftotext enhancer; the app falls back to the
+# pure-PHP smalot parser when it (or proc_open) is absent — as on shared hosting.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        libzip-dev libonig-dev libpng-dev libjpeg-dev libfreetype6-dev \
-        libxml2-dev unzip git \
-    && docker-php-ext-configure gd --with-freetype --with-jpeg \
-    && docker-php-ext-install pdo_mysql mbstring zip gd \
+        libzip-dev libonig-dev libxml2-dev unzip git poppler-utils \
+    && docker-php-ext-install pdo_mysql mbstring zip \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 

@@ -120,8 +120,9 @@ final class AdminController
     public function agent(Request $request): void
     {
         $this->page('agent', 'Agent settings', [
-            'agent' => $this->agents->findOrFail(),
-            'saved' => (bool) $request->input('saved'),
+            'agent'   => $this->agents->findOrFail(),
+            'saved'   => (bool) $request->input('saved'),
+            'app_url' => $this->config->string('app.url'),
         ]);
     }
 
@@ -168,8 +169,15 @@ final class AdminController
 
     public function knowledge(Request $request): void
     {
+        $flash = $_SESSION['flash'] ?? null;
+        unset($_SESSION['flash']);
+
         $docs = $this->db->all('SELECT * FROM documents ORDER BY id DESC LIMIT 100');
-        $this->page('knowledge', 'Knowledge base', ['documents' => $docs]);
+        $this->page('knowledge', 'Knowledge base', [
+            'documents'    => $docs,
+            'flash'        => $flash,
+            'lockedModel'  => $this->db->first("SELECT `value` FROM settings WHERE `key`='embedding_locked_model'")['value'] ?? null,
+        ]);
     }
 
     public function conversations(Request $request): void
