@@ -16,8 +16,9 @@ final class ModelHint
     {
         $m = strtolower($modelId);
 
-        // Cheapest / fastest tiers.
-        if (self::hasAny($m, ['flash-lite', 'lite', 'mini', 'nano', 'haiku', 'small', '8b'])) {
+        // Cheapest / fastest tiers. NOTE: hyphen-prefixed needles for -mini/-lite
+        // /-nano so they don't match inside words — e.g. "mini" ⊂ "geMINI".
+        if (self::hasAny($m, ['flash-lite', '-lite', '-mini', '-nano', 'haiku', '-8b', 'small'])) {
             return 'cheapest & fastest';
         }
         // Balanced, low-cost tiers.

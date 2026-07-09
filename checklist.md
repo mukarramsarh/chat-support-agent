@@ -31,12 +31,13 @@
 - [ ] Refactor any fat controllers; keep methods small
 - [ ] CI workflow (lint + analyse + test) — runs off-host, fine
 
-## 4. Unit tests — ⬜
-- [ ] PHPUnit set up (dev-only dependency)
-- [ ] Pure-logic units first: Chunker, VectorCodec (pack/cosine), Pricing, ModelHint, Config, Env, Crypto
+## 4. Unit tests — 🟡
+- [x] PHPUnit set up (phpunit.xml, dev-only dep, `composer test`)
+- [x] Pure-logic units: Chunker, VectorCodec (pack/cosine), Pricing, ModelHint, Config, Crypto, PiiRedactor — **32 tests, 72 assertions, green** (caught a real ModelHint bug)
 - [ ] Provider adapters via mocked HttpClient
 - [ ] RAG retriever + eval gate with fakes
-- [ ] Target meaningful coverage on Domain/Application layers
+- [ ] Repository/integration tests against a test DB
+- [ ] CI workflow to run on push (off-host)
 
 ## 5. Detailed conversation history (per-session) in admin — 🟡
 - [x] Conversations list page (clickable rows → detail)
