@@ -5,6 +5,7 @@ declare(strict_types=1);
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
 use SupportAI\Http\Controller\DocumentController;
+use SupportAI\Http\Controller\InstallController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Http\Middleware\AdminAuth;
 use SupportAI\Http\Middleware\VerifyCsrf;
@@ -18,6 +19,10 @@ use SupportAI\Support\Container;
 return function (Router $router, Container $container): void {
     $router->registerMiddleware('admin', new AdminAuth());
     $router->registerMiddleware('csrf', new VerifyCsrf());
+
+    // ── Web installer (self-locks once an agent exists) ──
+    $router->get('/install', [InstallController::class, 'show']);
+    $router->post('/install', [InstallController::class, 'run']);
 
     // ── Public: widget + chat API ──
     $router->get('/widget.js', [WidgetController::class, 'script']);

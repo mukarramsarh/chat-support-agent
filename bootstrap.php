@@ -23,6 +23,7 @@ use SupportAI\Application\Ingestion\TextExtractor;
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
 use SupportAI\Http\Controller\DocumentController;
+use SupportAI\Http\Controller\InstallController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\LLM\Pricing;
@@ -171,6 +172,10 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
     $c->get(AgentRepository::class),
     $c->get(SettingsRepository::class),
+    $c->get(Config::class),
+));
+$c->set(InstallController::class, fn (Container $c) => new InstallController(
+    $c->get(Database::class),
     $c->get(Config::class),
 ));
 $c->set(DocumentController::class, fn (Container $c) => new DocumentController(

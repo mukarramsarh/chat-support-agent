@@ -9,13 +9,13 @@
 
 ---
 
-## 1. Easy setup on production (no node, no Docker) — 🟡
+## 1. Easy setup on production (no node, no Docker) — ✅
 - [x] Pure-PHP app, docroot → `/public`, root `.htaccess` fallback
 - [x] Portable schema; `bin/console install`
 - [x] Docker is **dev-only** (never required in prod)
-- [ ] **Web installer** (`/install`): DB check, run schema, create owner, write `.env` — for hosts with no shell/composer
-- [ ] Ship a `vendor/` bundle or document upload (composer may be absent)
-- [ ] Pre-flight checks page: PHP version, ext-pdo/curl/mbstring/zip, writable `storage/`
+- [x] **Web installer** (`/install`): pre-flight checks, DB test, schema+seed run, writes `.env` (or shows it to paste) — no shell/composer; self-locks once an agent exists
+- [x] Pre-flight checks: PHP version, ext-pdo_mysql/curl/mbstring/json/zip, writable `storage/` + root
+- [ ] Ship a `vendor/` bundle or document upload (composer may be absent) — deploy doc
 
 ## 2. Easy to use — 🟡
 - [x] Clean admin UI, live widget preview, one-line embed shortcode
