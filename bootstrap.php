@@ -22,9 +22,12 @@ use SupportAI\Application\Ingestion\RecrawlService;
 use SupportAI\Application\Ingestion\TextExtractor;
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
+use SupportAI\Application\Eval\EvalRunner;
 use SupportAI\Http\Controller\DocumentController;
+use SupportAI\Http\Controller\EvalController;
 use SupportAI\Http\Controller\InstallController;
 use SupportAI\Http\Controller\WidgetController;
+use SupportAI\Infrastructure\Persistence\EvalRepository;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\LLM\Pricing;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
@@ -177,6 +180,17 @@ $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
 $c->set(InstallController::class, fn (Container $c) => new InstallController(
     $c->get(Database::class),
     $c->get(Config::class),
+));
+$c->set(EvalRepository::class, fn (Container $c) => new EvalRepository($c->get(Database::class)));
+$c->set(EvalRunner::class, fn (Container $c) => new EvalRunner(
+    $c->get(EvalRepository::class),
+    $c->get(AgentRepository::class),
+    $c->get(ChatService::class),
+));
+$c->set(EvalController::class, fn (Container $c) => new EvalController(
+    $c->get(EvalRepository::class),
+    $c->get(EvalRunner::class),
+    $c->get(AgentRepository::class),
 ));
 $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
     $c->get(IngestionService::class),

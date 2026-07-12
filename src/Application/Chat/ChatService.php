@@ -101,6 +101,52 @@ final class ChatService
         }
     }
 
+    /**
+     * Non-streaming answer for offline tools (eval harness, admin test sandbox).
+     * Runs the same retrieval + evaluation loop and returns the vetted answer +
+     * telemetry, without streaming or persisting a conversation.
+     *
+     * @param array<string,mixed> $agent
+     * @return array{answer:string,grounded:bool,answered:bool,confidence:float,retrieved:bool,citations:array}
+     */
+    public function answerFor(array $agent, string $query, ?string $visitorId = null): array
+    {
+        $agentId = (int) $agent['id'];
+        $context = $this->retriever->retrieve($agentId, $visitorId, $query);
+        $provider = $this->providers->chat($agent['chat_provider'] ?? null, $agent['chat_model'] ?: null);
+        $options = [
+            'model'       => $agent['chat_model'] ?: $this->config->string('llm.chat_model'),
+            'temperature' => (float) ($agent['temperature'] ?? 0.3),
+            'max_tokens'  => (int) ($agent['max_answer_tokens'] ?? $this->config->int('budget.max_answer_tokens', 800)),
+        ];
+        $minConfidence = $this->config->float('budget.min_confidence', 0.45);
+        $stub = ['id' => 0, 'visitor_id' => $visitorId, 'summary' => ''];
+        $messages = $this->buildMessages($agent, $stub, $context, $query, structured: true, includeQuery: true);
+
+        $usage = new Usage();
+        $completion = $provider->complete($messages, $options);
+        $usage = $usage->add($completion->usage);
+        $eval = $this->parseEval($completion, $context);
+        if (!$this->passesEval($eval, $context, $minConfidence)) {
+            $strict = $messages;
+            $strict[] = Message::system('Answer STRICTLY from the KNOWLEDGE. If it is not there, set answered=false and briefly say you do not have that information.');
+            $completion = $provider->complete($strict, $options);
+            $usage = $usage->add($completion->usage);
+            $eval = $this->parseEval($completion, $context);
+        }
+        $this->usage->record($provider->name(), $options['model'], 'eval', $usage, $agentId, null);
+
+        $passed = $this->passesEval($eval, $context, $minConfidence);
+        return [
+            'answer'     => ($passed && trim($eval['answer']) !== '') ? $eval['answer'] : (string) $agent['fallback_message'],
+            'grounded'   => (bool) $eval['grounded'],
+            'answered'   => (bool) $eval['answered'],
+            'confidence' => (float) $eval['confidence'],
+            'retrieved'  => $context->hasKnowledge,
+            'citations'  => $context->citations,
+        ];
+    }
+
     // ── Path A: pre-answer evaluation loop (default) ────────────────────────
 
     private function answerWithEval(
@@ -243,7 +289,7 @@ final class ChatService
     // ── Prompt assembly ─────────────────────────────────────────────────────
 
     /** @return Message[] */
-    private function buildMessages(array $agent, array $conversation, RetrievedContext $context, string $userText, bool $structured = false): array
+    private function buildMessages(array $agent, array $conversation, RetrievedContext $context, string $userText, bool $structured = false, bool $includeQuery = false): array
     {
         $persona = trim((string) ($agent['persona'] ?? ''));
         $system = $persona !== '' ? $persona : 'You are a helpful, concise support assistant.';
@@ -284,6 +330,12 @@ final class ChatService
         foreach ($memory['recent'] as $turn) {
             $content = $this->privacy->outbound($turn['content']);
             $messages[] = $turn['role'] === 'assistant' ? Message::assistant($content) : Message::user($content);
+        }
+
+        // Callers that don't persist the turn first (answerFor) must include the
+        // query explicitly, or the model gets zero user content.
+        if ($includeQuery) {
+            $messages[] = Message::user($this->privacy->outbound($userText));
         }
 
         if ($structured) {

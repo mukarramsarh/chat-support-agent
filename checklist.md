@@ -31,12 +31,11 @@
 - [ ] Refactor any fat controllers; keep methods small
 - [ ] CI workflow (lint + analyse + test) — runs off-host, fine
 
-## 4. Unit tests — 🟡
+## 4. Unit tests + eval harness — 🟡
 - [x] PHPUnit set up (phpunit.xml, dev-only dep, `composer test`)
 - [x] Pure-logic units: Chunker, VectorCodec (pack/cosine), Pricing, ModelHint, Config, Crypto, PiiRedactor — **32 tests, 72 assertions, green** (caught a real ModelHint bug)
-- [ ] Provider adapters via mocked HttpClient
-- [ ] RAG retriever + eval gate with fakes
-- [ ] Repository/integration tests against a test DB
+- [x] **Offline golden-Q&A eval harness** (`/admin/evals`): create sets, add cases (question + expected + must-include keywords), run through the REAL pipeline (ChatService::answerFor), deterministic scoring (keyword coverage + grounded + retrieval hit), per-case + aggregate results. Catches quality regressions.
+- [ ] Provider adapters via mocked HttpClient; repository/integration tests
 - [ ] CI workflow to run on push (off-host)
 
 ## 5. Detailed conversation history (per-session) in admin — 🟡
@@ -139,8 +138,7 @@ Two ways to embed, sharing one widget instance:
   → ingestion ✅ (synchronous; **cron/job_queue path ⬜**); retrieval ✅ vector-only (**hybrid FULLTEXT+vector ⬜**); **pre-answer eval loop ⬜**
 - **Phase 3** — long-term memory (summaries + extracted facts).
   → relevant-message recall ✅; **rolling summaries ⬜**, **fact extraction into `memories` ⬜**
-- **Phase 4** — offline golden-Q&A eval harness in the admin.
-  → DB tables exist (`eval_sets`/`eval_cases`/`eval_runs`/`eval_results`) ✅; **admin UI + runner ⬜**
+- **Phase 4** — offline golden-Q&A eval harness in the admin. ✅ (/admin/evals: sets/cases/runs/results + scoring)
 - **Phase 5** — rate limiting, domain allowlist, key encryption at rest, prompt-injection hardening.
   → rate limiting ✅, domain allowlist ✅, key encryption at rest ✅; **prompt-injection hardening ⬜**
 
