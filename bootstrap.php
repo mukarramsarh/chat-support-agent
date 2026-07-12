@@ -15,6 +15,7 @@ use SupportAI\Application\Chat\MemoryService;
 use SupportAI\Application\Chat\RagRetriever;
 use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Application\Compliance\PrivacyFilter;
+use SupportAI\Application\Demo\DemoSeeder;
 use SupportAI\Application\Ingestion\Chunker;
 use SupportAI\Application\Ingestion\IngestionService;
 use SupportAI\Application\Ingestion\IngestionWorker;
@@ -180,6 +181,15 @@ $c->set(InstallController::class, fn (Container $c) => new InstallController(
     $c->get(Database::class),
 ));
 $c->set(EvalRepository::class, fn (Container $c) => new EvalRepository($c->get(Database::class)));
+$c->set(DemoSeeder::class, fn (Container $c) => new DemoSeeder(
+    $c->get(AgentRepository::class),
+    $c->get(IngestionService::class),
+    $c->get(EvalRepository::class),
+    $c->get(SettingsRepository::class),
+    $c->get(Database::class),
+    $c->get(VectorStoreFactory::class),
+    $c->get(Logger::class),
+));
 $c->set(EvalRunner::class, fn (Container $c) => new EvalRunner(
     $c->get(EvalRepository::class),
     $c->get(AgentRepository::class),

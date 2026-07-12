@@ -97,8 +97,11 @@ final class GeminiProvider implements LLMProvider
         $body = $this->buildBody($messages, $options);
 
         if ($jsonSchema !== null) {
+            // JSON mode (no strict responseSchema): guarantees valid, properly
+            // escaped JSON — critical for non-Latin answers (e.g. Arabic) where
+            // free-form "JSON" often contains unescaped newlines. Fields are
+            // described in the prompt instead.
             $body['generationConfig']['responseMimeType'] = 'application/json';
-            $body['generationConfig']['responseSchema'] = $jsonSchema;
         }
 
         $res = $this->http->request('POST', $url, [], $body);

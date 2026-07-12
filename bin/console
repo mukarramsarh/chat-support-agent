@@ -32,6 +32,12 @@ switch ($command) {
         }
         break;
 
+    case 'demo':
+        $r = $c->get(SupportAI\Application\Demo\DemoSeeder::class)->seed();
+        echo "✓ Seeded ProcurementHub demo: {$r['docs']} knowledge docs + eval set #{$r['eval_set']} (AR/EN).\n";
+        echo "  Visit /demo to chat, /admin/evals to run the test set.\n";
+        break;
+
     case 'vector:info':
         $store = $c->get(VectorStoreFactory::class)->make();
         echo "Server: " . $db->serverVersion() . "\n";

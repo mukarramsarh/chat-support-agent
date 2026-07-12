@@ -93,10 +93,9 @@ final class OpenAIProvider implements LLMProvider
     {
         $body = $this->buildBody($messages, $options);
         if ($jsonSchema !== null) {
-            $body['response_format'] = [
-                'type' => 'json_schema',
-                'json_schema' => ['name' => 'response', 'schema' => $jsonSchema, 'strict' => true],
-            ];
+            // JSON mode (object) — guarantees valid escaped JSON without the
+            // strict-schema constraints; fields are described in the prompt.
+            $body['response_format'] = ['type' => 'json_object'];
         }
 
         $res = $this->http->request('POST', self::BASE . '/chat/completions', $this->headers(), $body);
