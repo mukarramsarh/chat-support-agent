@@ -12,7 +12,6 @@ use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
-use SupportAI\Support\Config;
 use SupportAI\Support\RateLimiter;
 
 /**
@@ -29,7 +28,6 @@ final class ChatController
         private LeadRepository $leads,
         private SettingsRepository $settings,
         private RateLimiter $rateLimiter,
-        private Config $config,
     ) {
     }
 

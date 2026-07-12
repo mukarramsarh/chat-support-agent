@@ -8,7 +8,6 @@ use PDO;
 use SupportAI\Http\Request;
 use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Database\Database;
-use SupportAI\Support\Config;
 use SupportAI\Support\View;
 use Throwable;
 
@@ -21,7 +20,7 @@ final class InstallController
 {
     private View $view;
 
-    public function __construct(private Database $db, private Config $config)
+    public function __construct(private Database $db)
     {
         $this->view = new View(base_path('admin/views'));
     }

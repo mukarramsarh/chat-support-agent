@@ -170,7 +170,6 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
     $c->get(LeadRepository::class),
     $c->get(SettingsRepository::class),
     $c->get(RateLimiter::class),
-    $c->get(Config::class),
 ));
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
     $c->get(AgentRepository::class),
@@ -179,7 +178,6 @@ $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
 ));
 $c->set(InstallController::class, fn (Container $c) => new InstallController(
     $c->get(Database::class),
-    $c->get(Config::class),
 ));
 $c->set(EvalRepository::class, fn (Container $c) => new EvalRepository($c->get(Database::class)));
 $c->set(EvalRunner::class, fn (Container $c) => new EvalRunner(
@@ -211,7 +209,6 @@ $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(ConversationRepository::class),
     $c->get(MessageRepository::class),
     $c->get(SettingsRepository::class),
-    $c->get(LeadRepository::class),
     $c->get(ComplianceService::class),
     $c->get(RateLimiter::class),
     $c->get(Database::class),

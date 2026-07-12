@@ -12,7 +12,6 @@ use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
-use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
@@ -40,7 +39,6 @@ final class AdminController
         private ConversationRepository $conversations,
         private MessageRepository $messages,
         private SettingsRepository $settings,
-        private LeadRepository $leads,
         private ComplianceService $compliance,
         private RateLimiter $rateLimiter,
         private Database $db,

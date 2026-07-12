@@ -16,7 +16,6 @@ use SupportAI\Infrastructure\Vector\VectorCodec;
  */
 final class MemoryRepository
 {
-    /** @param float[] $embedding */
     public function __construct(private Database $db)
     {
     }

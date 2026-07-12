@@ -27,9 +27,9 @@
 - [x] Layered clean architecture (Domain/Application/Infrastructure/Http/Support)
 - [x] DI container; depend on interfaces (LLMProvider, VectorStore, ContextRetriever, EmbeddingProvider)
 - [x] `declare(strict_types=1)`, typed signatures, PSR-4
-- [ ] Adopt PSR-12 + static analysis (PHPStan/Psalm) config
-- [ ] Refactor any fat controllers; keep methods small
-- [ ] CI workflow (lint + analyse + test) — runs off-host, fine
+- [x] **PHPStan level 5** config (`phpstan.neon`, `composer analyse`) — **0 errors** (found+fixed 4 dead injections)
+- [x] **CI workflow** (`.github/workflows/ci.yml`): PHP 8.2 → composer install → phpstan → phpunit on push/PR
+- [ ] Raise PHPStan level over time; add PHP-CS-Fixer (PSR-12)
 
 ## 4. Unit tests + eval harness — 🟡
 - [x] PHPUnit set up (phpunit.xml, dev-only dep, `composer test`)
