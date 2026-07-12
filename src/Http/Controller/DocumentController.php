@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace SupportAI\Http\Controller;
 
 use SupportAI\Application\Ingestion\IngestionService;
+use SupportAI\Application\Ingestion\RecrawlService;
 use SupportAI\Http\Request;
 use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
@@ -24,8 +25,14 @@ final class DocumentController
     private const MAX_UPLOAD_BYTES = 10_485_760; // 10 MB
     private const ALLOWED = ['pdf' => 'pdf', 'docx' => 'docx'];
 
+    /** Human-friendly recrawl interval options → minutes. */
+    private const INTERVALS = [
+        'off' => 0, 'hourly' => 60, 'daily' => 1440, 'weekly' => 10080, 'monthly' => 43200,
+    ];
+
     public function __construct(
         private IngestionService $ingestion,
+        private RecrawlService $recrawl,
         private AgentRepository $agents,
         private DocumentRepository $documents,
         private ChunkRepository $chunks,
@@ -53,8 +60,50 @@ final class DocumentController
     public function addUrl(Request $request): void
     {
         $agentId = (int) $this->agents->findOrFail()['id'];
-        $url = trim((string) $request->input('url', ''));
-        $this->run(fn () => $this->ingestion->ingest($agentId, 'url', ['url' => $url]));
+
+        // Accept one OR many URLs (one per line / comma) and an optional recrawl schedule.
+        $raw = (string) $request->input('url', '');
+        $urls = array_values(array_filter(array_map('trim', preg_split('/[\r\n,]+/', $raw) ?: [])));
+        $urls = array_slice(array_unique($urls), 0, 20); // cap per request (sync ingest)
+        if ($urls === []) {
+            $this->finish('error', 'Please enter at least one URL.');
+            return;
+        }
+        $minutes = self::INTERVALS[(string) $request->input('refresh', 'off')] ?? 0;
+
+        $added = 0;
+        $errors = [];
+        foreach ($urls as $url) {
+            try {
+                $result = $this->ingestion->ingest($agentId, 'url', ['url' => $url]);
+                if ($minutes > 0) {
+                    $this->documents->setRefreshSchedule($result['document_id'], $minutes);
+                }
+                $added++;
+            } catch (Throwable $e) {
+                $errors[] = parse_url($url, PHP_URL_HOST) . ': ' . $e->getMessage();
+            }
+        }
+
+        $msg = "Added {$added} of " . count($urls) . ' URL(s)' . ($minutes > 0 ? ' with auto-refresh' : '') . '.';
+        if ($errors !== []) {
+            $msg .= ' Skipped: ' . implode('; ', array_slice($errors, 0, 3));
+        }
+        $this->finish($added > 0 ? 'ok' : 'error', $msg);
+    }
+
+    /** Admin "Refresh now" for a URL source. */
+    public function refresh(Request $request): void
+    {
+        $id = (int) $request->input('id', 0);
+        try {
+            $r = $this->recrawl->refreshOne($id);
+            $this->finish('ok', $r['status'] === 'updated'
+                ? "Refreshed “{$r['title']}” — re-indexed {$r['chunks']} chunks."
+                : "“{$r['title']}” checked — no changes since last fetch.");
+        } catch (Throwable $e) {
+            $this->finish('error', $e->getMessage());
+        }
     }
 
     public function upload(Request $request): void

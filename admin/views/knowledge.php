@@ -35,9 +35,18 @@
   <!-- Add URL -->
   <form class="tab-pane" data-pane="url" method="post" action="/admin/knowledge/url" style="display:none">
     <?= csrf_field() ?>
-    <div class="field"><label>Page URL</label>
-      <input type="text" name="url" required placeholder="https://example.com/help/article">
-      <div class="hint">We extract the main article text (not navigation/ads).</div></div>
+    <div class="field"><label>Page URL(s)</label>
+      <textarea name="url" required placeholder="https://example.com/help/article&#10;https://gov.example.sa/regulations" style="min-height:90px"></textarea>
+      <div class="hint">One URL per line (up to 20). We extract the main article text, not navigation/ads.</div></div>
+    <div class="field" style="margin-top:12px;max-width:280px"><label>Auto-refresh (recrawl on schedule)</label>
+      <select name="refresh">
+        <option value="off">Off — fetch once</option>
+        <option value="hourly">Every hour</option>
+        <option value="daily">Every day</option>
+        <option value="weekly">Every week</option>
+        <option value="monthly">Every month</option>
+      </select>
+      <div class="hint">Great for pages that change (e.g. government rules). Requires the cron job to be set up.</div></div>
     <div style="margin-top:14px"><button class="btn" type="submit">Fetch &amp; add</button></div>
   </form>
 
@@ -56,27 +65,47 @@
   <?php if (empty($documents)): ?>
     <div class="empty"><div class="big">📚</div>No knowledge yet. Add your first source above to give the assistant something to answer from.</div>
   <?php else: ?>
+    <?php
+      $intervalLabel = function (int $m): string {
+        return [60 => 'hourly', 1440 => 'daily', 10080 => 'weekly', 43200 => 'monthly'][$m] ?? ($m > 0 ? $m . 'm' : '');
+      };
+    ?>
     <table>
-      <thead><tr><th>Title</th><th>Type</th><th>Chunks</th><th>Status</th><th>Added</th><th></th></tr></thead>
+      <thead><tr><th>Title</th><th>Type</th><th>Chunks</th><th>Refresh</th><th>Status</th><th></th></tr></thead>
       <tbody>
         <?php foreach ($documents as $d):
           $status = $d['status'];
           $cls = ['ready' => 'ok', 'processing' => 'info', 'pending' => 'mut', 'failed' => 'warn'][$status] ?? 'mut';
+          $isUrl = $d['source_type'] === 'url';
+          $interval = (int) ($d['refresh_interval_minutes'] ?? 0);
         ?>
           <tr>
             <td><strong><?= e($d['title'] ?: '(untitled)') ?></strong>
+              <?php if ($isUrl && $d['source_uri']): ?>
+                <div style="color:var(--muted);font-size:12px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= e((string) $d['source_uri']) ?></div>
+              <?php endif; ?>
               <?php if ($status === 'failed' && $d['error_message']): ?>
                 <div style="color:#b91c1c;font-size:12px"><?= e($d['error_message']) ?></div>
               <?php endif; ?>
             </td>
             <td><span class="pill mut"><?= e(strtoupper($d['source_type'])) ?></span></td>
             <td><?= (int) $d['chunk_count'] ?></td>
+            <td>
+              <?php if ($interval > 0): ?>
+                <span class="pill info"><?= e($intervalLabel($interval)) ?></span>
+                <?php if (!empty($d['next_refresh_at'])): ?><div style="color:var(--muted);font-size:11px">next: <?= e(substr((string) $d['next_refresh_at'], 5, 11)) ?></div><?php endif; ?>
+              <?php else: ?><span style="color:#cbd5e1">—</span><?php endif; ?>
+            </td>
             <td><span class="pill <?= $cls ?>"><?= e($status) ?></span></td>
-            <td style="color:var(--muted)"><?= e(substr((string) $d['created_at'], 0, 10)) ?></td>
-            <td style="text-align:right">
-              <form method="post" action="/admin/knowledge/delete" onsubmit="return confirm('Remove this source?')">
-                <?= csrf_field() ?>
-                <input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
+            <td style="text-align:right;white-space:nowrap">
+              <?php if ($isUrl): ?>
+                <form method="post" action="/admin/knowledge/refresh" style="display:inline">
+                  <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
+                  <button class="btn ghost" style="padding:6px 12px;font-size:13px" title="Re-fetch now">↻ Refresh</button>
+                </form>
+              <?php endif; ?>
+              <form method="post" action="/admin/knowledge/delete" style="display:inline" onsubmit="return confirm('Remove this source?')">
+                <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
                 <button class="btn ghost" style="padding:6px 12px;font-size:13px">Delete</button>
               </form>
             </td>

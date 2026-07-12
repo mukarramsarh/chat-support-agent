@@ -38,6 +38,19 @@ final class ChunkRepository
     }
 
     /**
+     * Delete all chunks for a document (used when re-indexing a refreshed source)
+     * and return their ids so the caller can purge external vectors too.
+     *
+     * @return int[]
+     */
+    public function deleteForDocument(int $documentId): array
+    {
+        $ids = $this->idsForDocument($documentId);
+        $this->db->run('DELETE FROM chunks WHERE document_id = :d', ['d' => $documentId]);
+        return $ids;
+    }
+
+    /**
      * Fetch chunks by id (with their document title/uri for citations),
      * returned in the SAME order as $ids (i.e. ranked by the caller).
      *

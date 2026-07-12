@@ -99,11 +99,17 @@ CREATE TABLE IF NOT EXISTS documents (
     chunk_count   INT UNSIGNED  NOT NULL DEFAULT 0,
     error_message VARCHAR(500)  NULL,
     metadata      JSON          NULL,               -- page count, author, language, ...
+    -- Scheduled recrawl (URL sources only): 0 = off. cron refetches when due and
+    -- re-indexes only if the content hash changed.
+    refresh_interval_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+    last_fetched_at TIMESTAMP   NULL,
+    next_refresh_at TIMESTAMP   NULL,
     created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     KEY idx_doc_agent_status (agent_id, status),
     KEY idx_doc_hash (content_hash),
+    KEY idx_doc_refresh (next_refresh_at),
     CONSTRAINT fk_document_agent FOREIGN KEY (agent_id) REFERENCES agents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

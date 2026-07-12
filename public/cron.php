@@ -25,6 +25,10 @@ if ($expected === '' || !hash_equals($expected, (string) $given)) {
 
 header('Content-Type: text/plain');
 
-// Storage-limitation: purge data past the retention window (PDPL).
+// 1) Refresh URL sources due for a recrawl (each isolated; failures don't block).
+$r = $c->get(SupportAI\Application\Ingestion\RecrawlService::class)->refreshDue(5);
+echo "OK — recrawl checked {$r['checked']} (updated {$r['updated']}, unchanged {$r['unchanged']}, failed {$r['failed']}).\n";
+
+// 2) Storage-limitation: purge data past the retention window (PDPL).
 $purged = $c->get(SupportAI\Application\Compliance\ComplianceService::class)->purge();
-echo "OK — retention purge removed {$purged} conversation(s).\n";
+echo "retention purge removed {$purged} conversation(s).\n";

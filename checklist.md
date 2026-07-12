@@ -73,10 +73,12 @@
 
 ## 9. Context uploading & update flow — 🟡
 - [x] Add text / URL / PDF / DOCX; parse → chunk → embed → store; delete source
+- [x] **Multiple URLs at once** (one per line, capped) — each isolated, per-URL result
 - [x] Embedding-model lock; `kb_version` bump invalidates cache
-- [ ] Re-index / update a source (change detection via content_hash)
-- [ ] Background cron ingestion for large files (job_queue) — keep sync path as fallback
-- [ ] Per-source visibility toggle; recrawl URLs on a schedule
+- [x] **Re-index / update** a source with content-hash change detection (unchanged = cheap no-op; changed = chunks+vectors replaced, no dupes)
+- [x] **Scheduled URL recrawl** — admin-set interval (hourly/daily/weekly/monthly); cron refetches due sources, each isolated so one failure never blocks others; per-source "Refresh now"
+- [ ] Background job_queue ingestion for very large files (sync path is the current baseline)
+- [ ] Per-source visibility/enable toggle
 
 ## 10. Security — 🟡
 - [x] Encrypted secrets at rest (Crypto: sodium→openssl)

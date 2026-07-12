@@ -16,6 +16,7 @@ use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Application\Compliance\PrivacyFilter;
 use SupportAI\Application\Ingestion\Chunker;
 use SupportAI\Application\Ingestion\IngestionService;
+use SupportAI\Application\Ingestion\RecrawlService;
 use SupportAI\Application\Ingestion\TextExtractor;
 use SupportAI\Http\Controller\AdminController;
 use SupportAI\Http\Controller\ChatController;
@@ -112,6 +113,11 @@ $c->set(IngestionService::class, fn (Container $c) => new IngestionService(
     $c->get(UsageRepository::class),
     $c->get(Logger::class),
 ));
+$c->set(RecrawlService::class, fn (Container $c) => new RecrawlService(
+    $c->get(DocumentRepository::class),
+    $c->get(IngestionService::class),
+    $c->get(Logger::class),
+));
 
 // ── Application services ──
 $c->set(MemoryService::class, fn (Container $c) => new MemoryService($c->get(MessageRepository::class)));
@@ -144,6 +150,7 @@ $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
 ));
 $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
     $c->get(IngestionService::class),
+    $c->get(RecrawlService::class),
     $c->get(AgentRepository::class),
     $c->get(DocumentRepository::class),
     $c->get(ChunkRepository::class),

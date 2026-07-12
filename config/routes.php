@@ -42,6 +42,7 @@ return function (Router $router, Container $container): void {
     $router->post('/admin/knowledge/url', [DocumentController::class, 'addUrl'], ['admin', 'csrf']);
     $router->post('/admin/knowledge/upload', [DocumentController::class, 'upload'], ['admin', 'csrf']);
     $router->post('/admin/knowledge/delete', [DocumentController::class, 'delete'], ['admin', 'csrf']);
+    $router->post('/admin/knowledge/refresh', [DocumentController::class, 'refresh'], ['admin', 'csrf']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
     $router->get('/admin/conversations/{id}', [AdminController::class, 'conversationDetail'], ['admin']);
     $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin', 'csrf']);
