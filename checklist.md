@@ -63,9 +63,12 @@
 ## 8. Solid RAG flow — 🟡
 - [x] Ingestion → chunks + embeddings stored (text/URL/PDF/DOCX)
 - [x] **RagRetriever wired into chat** (embed query → vector search → min-score gate → cited context)
+- [x] **Pre-answer evaluation loop** — single structured call (answer/grounded/confidence/answered),
+      free deterministic gates (min-score + citation-existence), ONE capped corrective retry, human-handoff
+      fallback; vetted answer streamed in chunks. Eval telemetry stored per message + drives session status.
+      Toggle via `ENABLE_EVAL`; true streaming preserved when off.
 - [ ] Hybrid retrieval (FULLTEXT prefilter + vector) on the MySQL/PHP path
 - [ ] Optional rerank (cheap model) when scores are ambiguous
-- [ ] Pre-answer evaluation loop (grounded/confidence self-check, one capped retry, human-handoff fallback)
 - [ ] Answer cache (skip LLM on repeat FAQs)
 
 ## 9. Context uploading & update flow — 🟡

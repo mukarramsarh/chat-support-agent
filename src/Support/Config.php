@@ -59,6 +59,8 @@ final class Config
                 'min_score'         => (float) Env::get('RETRIEVAL_MIN_SCORE', '0.20'),
                 'answer_cache'      => self::toBool(Env::get('ENABLE_ANSWER_CACHE', 'true')),
                 'prompt_cache'      => self::toBool(Env::get('ENABLE_PROMPT_CACHE', 'true')),
+                'enable_eval'       => self::toBool(Env::get('ENABLE_EVAL', 'true')),
+                'min_confidence'    => (float) Env::get('EVAL_MIN_CONFIDENCE', '0.45'),
             ],
         ]);
     }

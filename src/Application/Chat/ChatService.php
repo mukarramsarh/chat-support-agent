@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace SupportAI\Application\Chat;
 
+use SupportAI\Application\Compliance\PrivacyFilter;
+use SupportAI\Domain\LLM\Completion;
+use SupportAI\Domain\LLM\LLMProvider;
 use SupportAI\Domain\LLM\Message;
 use SupportAI\Domain\LLM\Usage;
 use SupportAI\Http\SseStream;
@@ -16,13 +19,17 @@ use SupportAI\Support\Logger;
 use Throwable;
 
 /**
- * Orchestrates a single support turn end-to-end:
+ * Orchestrates a single support turn:
  *
- *   budget gate → assemble prompt (persona + knowledge + memory + history)
- *   → stream answer → persist message + usage → emit citations & done.
+ *   budget gate → retrieve knowledge + memory → assemble prompt
+ *   → EITHER stream directly (eval off) OR run the pre-answer evaluation loop
+ *   → persist message + usage → derive status → emit done.
  *
- * RAG and the eval loop attach through the ContextRetriever seam and (later) an
- * Evaluator, so this class stays small and provider-agnostic.
+ * The evaluation loop (default on) makes the agent trustworthy on a tight
+ * budget: the model drafts AND self-critiques in ONE structured call
+ * (answer/grounded/confidence/answered). Free deterministic gates catch bad
+ * answers; only genuinely weak ones trigger a single corrective retry; if that
+ * still fails we hand off to a human instead of guessing.
  */
 final class ChatService
 {
@@ -30,7 +37,7 @@ final class ChatService
         private ProviderFactory $providers,
         private ContextRetriever $retriever,
         private MemoryService $memory,
-        private \SupportAI\Application\Compliance\PrivacyFilter $privacy,
+        private PrivacyFilter $privacy,
         private ConversationRepository $conversations,
         private MessageRepository $messages,
         private UsageRepository $usage,
@@ -40,8 +47,8 @@ final class ChatService
     }
 
     /**
-     * @param array<string,mixed> $agent          hydrated agent row
-     * @param array<string,mixed> $conversation    hydrated conversation row
+     * @param array<string,mixed> $agent
+     * @param array<string,mixed> $conversation
      */
     public function streamReply(array $agent, array $conversation, string $userText, SseStream $sse): void
     {
@@ -49,10 +56,9 @@ final class ChatService
         $conversationId = (int) $conversation['id'];
         $startedAt = (int) (microtime(true) * 1000);
 
-        // Persist the user's turn immediately so it is never lost.
         $this->messages->addUser($conversationId, $userText);
 
-        // ── Budget gate: hard stop before spending anything over the ceiling ──
+        // ── Budget gate ──
         $budget = (float) ($agent['monthly_budget_usd'] ?? $this->config->float('budget.monthly_usd', 2.0));
         if ($this->usage->monthToDateSpend($agentId) >= $budget) {
             $this->logger->warning('Monthly budget reached; declining', ['agent' => $agentId]);
@@ -60,27 +66,121 @@ final class ChatService
             return;
         }
 
-        // ── Retrieve knowledge + memory (Phase 0: empty) ──
+        // ── Retrieve knowledge + memory ──
         $context = $this->retriever->retrieve($agentId, $conversation['visitor_id'] ?? null, $userText);
         $sse->event('meta', [
             'conversation_id' => $conversation['public_id'],
             'citations'       => $context->citations,
         ]);
 
-        // ── Assemble the prompt within budget ──
-        $messages = $this->buildMessages($agent, $conversation, $context, $userText);
-
-        $provider = $this->providers->chat(
-            $agent['chat_provider'] ?? null,
-            $agent['chat_model'] ?: null,
-        );
+        $provider = $this->providers->chat($agent['chat_provider'] ?? null, $agent['chat_model'] ?: null);
         $options = [
             'model'       => $agent['chat_model'] ?: $this->config->string('llm.chat_model'),
             'temperature' => (float) ($agent['temperature'] ?? 0.3),
             'max_tokens'  => (int) ($agent['max_answer_tokens'] ?? $this->config->int('budget.max_answer_tokens', 800)),
         ];
 
-        // ── Stream tokens to the browser, buffering the full answer for storage ──
+        if ($this->config->bool('budget.enable_eval', true)) {
+            $this->answerWithEval($agent, $conversation, $context, $userText, $provider, $options, $sse, $startedAt);
+        } else {
+            $this->answerStreaming($agent, $conversation, $context, $userText, $provider, $options, $sse, $startedAt);
+        }
+    }
+
+    // ── Path A: pre-answer evaluation loop (default) ────────────────────────
+
+    private function answerWithEval(
+        array $agent, array $conversation, RetrievedContext $context, string $userText,
+        LLMProvider $provider, array $options, SseStream $sse, int $startedAt,
+    ): void {
+        $agentId = (int) $agent['id'];
+        $conversationId = (int) $conversation['id'];
+        $minConfidence = $this->config->float('budget.min_confidence', 0.45);
+
+        $totalUsage = new Usage();
+        $totalCost = 0.0;
+        $attempts = 0;
+        $eval = null;
+
+        $messages = $this->buildMessages($agent, $conversation, $context, $userText, structured: true);
+
+        try {
+            // Attempt 1 — draft + self-critique in one call.
+            $completion = $provider->complete($messages, $options);
+            $attempts++;
+            $totalCost += $this->usage->record($provider->name(), $options['model'], 'chat', $completion->usage, $agentId, $conversationId);
+            $totalUsage = $totalUsage->add($completion->usage);
+            $eval = $this->parseEval($completion, $context);
+
+            // Corrective retry only if the free/self gates say the answer is weak.
+            if (!$this->passesEval($eval, $context, $minConfidence)) {
+                $strict = $messages;
+                $strict[] = Message::system(
+                    'Your previous answer was not well grounded. Answer STRICTLY from the KNOWLEDGE. '
+                    . 'If the answer is not in the KNOWLEDGE, set answered=false and keep the answer to a brief, honest '
+                    . '"I don\'t have that information" with an offer to connect a human.'
+                );
+                $completion = $provider->complete($strict, $options);
+                $attempts++;
+                $totalCost += $this->usage->record($provider->name(), $options['model'], 'eval', $completion->usage, $agentId, $conversationId);
+                $totalUsage = $totalUsage->add($completion->usage);
+                $eval = $this->parseEval($completion, $context);
+            }
+        } catch (Throwable $e) {
+            $this->logger->error('Eval generation failed', ['error' => $e->getMessage()]);
+            $sse->event('error', ['message' => 'The assistant is temporarily unavailable. Please try again.']);
+            return;
+        }
+
+        // Decide the final answer + verdict.
+        $passed = $this->passesEval($eval, $context, $minConfidence);
+        if ($passed && trim($eval['answer']) !== '') {
+            $answer = $eval['answer'];
+            $verdict = 'sent';
+        } else {
+            $answer = (string) $agent['fallback_message'];
+            $verdict = 'escalated';
+        }
+
+        // Stream the vetted answer to the browser (chunked for the typing effect).
+        $this->emitChunks($sse, $answer);
+
+        $latency = (int) (microtime(true) * 1000) - $startedAt;
+        $evalMeta = [
+            'grounded'   => (bool) $eval['grounded'],
+            'confidence' => round((float) $eval['confidence'], 2),
+            'answered'   => (bool) $eval['answered'],
+            'retries'    => $attempts - 1,
+            'verdict'    => $verdict,
+        ];
+        $this->messages->addAssistant(
+            $conversationId, $answer, $options['model'], $totalUsage, $totalCost,
+            $context->citations, $evalMeta, $latency,
+        );
+        $this->conversations->touch($conversationId, $totalCost);
+
+        $needsAttention = $verdict === 'escalated'
+            || !$eval['answered']
+            || ($context->hasKnowledge && !$eval['grounded']);
+        $this->conversations->setStatus($conversationId, $needsAttention ? 'needs_attention' : 'ai_answered');
+
+        $sse->event('done', [
+            'usage'      => ['tokens_in' => $totalUsage->inputTokens, 'tokens_out' => $totalUsage->outputTokens, 'cost_usd' => $totalCost],
+            'latency_ms' => $latency,
+            'eval'       => $evalMeta,
+        ]);
+    }
+
+    // ── Path B: direct streaming (eval disabled) ────────────────────────────
+
+    private function answerStreaming(
+        array $agent, array $conversation, RetrievedContext $context, string $userText,
+        LLMProvider $provider, array $options, SseStream $sse, int $startedAt,
+    ): void {
+        $agentId = (int) $agent['id'];
+        $conversationId = (int) $conversation['id'];
+        $messages = $this->buildMessages($agent, $conversation, $context, $userText);
+
         $answer = '';
         try {
             $usage = $provider->streamChat($messages, $options, function (string $delta) use (&$answer, $sse): void {
@@ -100,46 +200,27 @@ final class ChatService
             $usedFallback = true;
         }
 
-        // ── Persist + account ──
-        $cost = $this->usage->record(
-            $provider->name(),
-            $options['model'],
-            'chat',
-            $usage,
-            $agentId,
-            $conversationId,
-        );
+        $cost = $this->usage->record($provider->name(), $options['model'], 'chat', $usage, $agentId, $conversationId);
         $latency = (int) (microtime(true) * 1000) - $startedAt;
         $this->messages->addAssistant(
-            $conversationId, $answer, $options['model'], $usage, $cost,
-            $context->citations,
-            ['grounded' => $context->hasKnowledge, 'verdict' => 'sent'],
-            $latency,
+            $conversationId, $answer, $options['model'], $usage, $cost, $context->citations,
+            ['grounded' => $context->hasKnowledge, 'verdict' => $usedFallback ? 'escalated' : 'sent'], $latency,
         );
         $this->conversations->touch($conversationId, $cost);
 
-        // Auto-derive session status (admin can override). A fallback answer or
-        // ungrounded reply that used no knowledge is flagged for a human to review.
         $needsAttention = $usedFallback || (!$context->hasKnowledge && $context->topScore > 0.0);
         $this->conversations->setStatus($conversationId, $needsAttention ? 'needs_attention' : 'ai_answered');
 
         $sse->event('done', [
-            'usage' => [
-                'tokens_in'  => $usage->inputTokens,
-                'tokens_out' => $usage->outputTokens,
-                'cost_usd'   => $cost,
-            ],
+            'usage'      => ['tokens_in' => $usage->inputTokens, 'tokens_out' => $usage->outputTokens, 'cost_usd' => $cost],
             'latency_ms' => $latency,
         ]);
     }
 
-    /**
-     * Build the message list. Order matters for prompt caching: the stable
-     * persona + knowledge go first (marked cacheable), volatile history last.
-     *
-     * @return Message[]
-     */
-    private function buildMessages(array $agent, array $conversation, RetrievedContext $context, string $userText): array
+    // ── Prompt assembly ─────────────────────────────────────────────────────
+
+    /** @return Message[] */
+    private function buildMessages(array $agent, array $conversation, RetrievedContext $context, string $userText, bool $structured = false): array
     {
         $persona = trim((string) ($agent['persona'] ?? ''));
         $system = $persona !== '' ? $persona : 'You are a helpful, concise support assistant.';
@@ -155,11 +236,8 @@ final class ChatService
             $messages[] = Message::system("KNOWLEDGE:\n" . $context->contextBlock, cacheable: true);
         }
 
-        // Memory: relevant older messages (recall) + recent verbatim turns.
         $memory = $this->memory->build((int) $conversation['id'], $conversation['visitor_id'] ?? null, $userText);
 
-        // All user-originated content is PII-redacted before it goes to the
-        // (external) model; the untouched originals remain in the DB transcript.
         if ($memory['relevant'] !== []) {
             $recall = "Relevant earlier messages from this user (for context):\n";
             foreach ($memory['relevant'] as $m) {
@@ -171,16 +249,122 @@ final class ChatService
             $messages[] = Message::system('Conversation so far (summary): ' . $conversation['summary']);
         }
 
-        // Recent verbatim window. The current user turn was persisted before this
-        // call, so it is already the final entry — we must NOT append it again.
         foreach ($memory['recent'] as $turn) {
             $content = $this->privacy->outbound($turn['content']);
-            $messages[] = $turn['role'] === 'assistant'
-                ? Message::assistant($content)
-                : Message::user($content);
+            $messages[] = $turn['role'] === 'assistant' ? Message::assistant($content) : Message::user($content);
+        }
+
+        if ($structured) {
+            // Ask for a self-critiquing JSON envelope (parsed manually so this is
+            // provider-portable — no reliance on vendor-specific schema modes).
+            $messages[] = Message::system(
+                "OUTPUT FORMAT: Respond with ONLY a JSON object (no code fences, no prose) with these keys:\n"
+                . '- "answer": string — your reply to the user, with inline [n] citations to the KNOWLEDGE items you used.' . "\n"
+                . '- "grounded": boolean — true ONLY if every factual claim in answer is supported by the KNOWLEDGE.' . "\n"
+                . '- "confidence": number between 0 and 1.' . "\n"
+                . '- "answered": boolean — true if the question could be answered from the available information, false if you had to say you do not know.'
+            );
         }
 
         return $messages;
+    }
+
+    // ── Evaluation helpers ──────────────────────────────────────────────────
+
+    /**
+     * Parse the structured envelope; degrade gracefully to a plain-text answer if
+     * the model didn't return clean JSON. Also runs the free deterministic
+     * citation-existence check (hallucinated [n] → not grounded).
+     *
+     * @return array{answer:string,grounded:bool,confidence:float,answered:bool}
+     */
+    private function parseEval(Completion $completion, RetrievedContext $context): array
+    {
+        $json = $completion->json;
+        if (!is_array($json)) {
+            $decoded = json_decode($this->extractJson($completion->text), true);
+            $json = is_array($decoded) ? $decoded : null;
+        }
+
+        if ($json === null) {
+            // No JSON — treat the whole text as the answer, mildly confident.
+            return [
+                'answer'     => trim($completion->text),
+                'grounded'   => $context->hasKnowledge,
+                'confidence' => 0.6,
+                'answered'   => trim($completion->text) !== '',
+            ];
+        }
+
+        $answer = trim((string) ($json['answer'] ?? ''));
+        $grounded = (bool) ($json['grounded'] ?? false);
+        $confidence = (float) ($json['confidence'] ?? 0.0);
+        $answered = (bool) ($json['answered'] ?? ($answer !== ''));
+
+        // Deterministic gate: a citation to a non-existent KNOWLEDGE item means
+        // the model invented a source — force it ungrounded.
+        if ($grounded && !$this->citationsValid($answer, count($context->citations))) {
+            $grounded = false;
+        }
+
+        return ['answer' => $answer, 'grounded' => $grounded, 'confidence' => $confidence, 'answered' => $answered];
+    }
+
+    private function passesEval(array $eval, RetrievedContext $context, float $minConfidence): bool
+    {
+        if (trim($eval['answer']) === '') {
+            return false;
+        }
+        if ($eval['confidence'] < $minConfidence) {
+            return false;
+        }
+        // When we injected knowledge, the answer must be grounded in it.
+        if ($context->hasKnowledge && !$eval['grounded']) {
+            return false;
+        }
+        return true;
+    }
+
+    /** Every [n] cited in the answer must map to a real KNOWLEDGE item. */
+    private function citationsValid(string $answer, int $citationCount): bool
+    {
+        if (!preg_match_all('/\[(\d+)\]/', $answer, $m)) {
+            return true; // no citations to validate
+        }
+        foreach ($m[1] as $n) {
+            $i = (int) $n;
+            if ($i < 1 || $i > $citationCount) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private function extractJson(string $text): string
+    {
+        $text = trim($text);
+        $text = preg_replace('/^```(?:json)?|```$/m', '', $text) ?? $text;
+        $start = strpos($text, '{');
+        $end = strrpos($text, '}');
+        return ($start !== false && $end !== false && $end > $start) ? substr($text, $start, $end - $start + 1) : $text;
+    }
+
+    /** Emit the vetted answer as a few SSE token events for the typing effect. */
+    private function emitChunks(SseStream $sse, string $answer): void
+    {
+        $words = preg_split('/(\s+)/', $answer, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [$answer];
+        $buffer = '';
+        $count = 0;
+        foreach ($words as $w) {
+            $buffer .= $w;
+            if (trim($w) !== '' && ++$count % 4 === 0) {
+                $sse->token($buffer);
+                $buffer = '';
+            }
+        }
+        if ($buffer !== '') {
+            $sse->token($buffer);
+        }
     }
 
     private function declineForBudget(array $agent, int $conversationId, SseStream $sse): void
