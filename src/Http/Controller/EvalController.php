@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace SupportAI\Http\Controller;
 
+use SupportAI\Application\Chat\ChatService;
 use SupportAI\Application\Eval\EvalRunner;
 use SupportAI\Http\Request;
 use SupportAI\Http\Response;
@@ -25,6 +26,7 @@ final class EvalController
         private EvalRepository $evals,
         private EvalRunner $runner,
         private AgentRepository $agents,
+        private ChatService $chat,
     ) {
         $this->view = new View(base_path('admin/views'));
         if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -55,6 +57,27 @@ final class EvalController
             'latest'   => $latest,
             'results'  => $results,
             'flash'    => $flash,
+        ]));
+    }
+
+    /** In-admin test sandbox: ask the live agent a question, see answer + eval. */
+    public function sandbox(Request $request): void
+    {
+        $agent = $this->agents->findOrFail();
+        $q = trim((string) $request->input('q', ''));
+        $result = null;
+        if ($q !== '') {
+            try {
+                $result = $this->chat->answerFor($agent, $q);
+            } catch (Throwable $e) {
+                $result = ['error' => $e->getMessage()];
+            }
+        }
+        Response::html($this->view->render('test', [
+            'title'  => 'Test chat',
+            'active' => 'test',
+            'q'      => $q,
+            'result' => $result,
         ]));
     }
 

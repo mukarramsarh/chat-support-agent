@@ -85,6 +85,7 @@
           'dashboard'     => ['/admin', '▊', 'Dashboard'],
           'agent'         => ['/admin/agent', '⚙', 'Agent'],
           'knowledge'     => ['/admin/knowledge', '📚', 'Knowledge'],
+          'test'          => ['/admin/test', '⚡', 'Test chat'],
           'conversations' => ['/admin/conversations', '💬', 'Conversations'],
           'costs'         => ['/admin/costs', '📈', 'Cost & usage'],
           'evals'         => ['/admin/evals', '🧪', 'Eval harness'],

@@ -189,6 +189,7 @@ $c->set(EvalController::class, fn (Container $c) => new EvalController(
     $c->get(EvalRepository::class),
     $c->get(EvalRunner::class),
     $c->get(AgentRepository::class),
+    $c->get(ChatService::class),
 ));
 $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
     $c->get(IngestionService::class),

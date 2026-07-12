@@ -122,6 +122,7 @@ final class AdminController
             'budget'       => $budget,
             'budget_pct'   => $budget > 0 ? min(100, ($spend / $budget) * 100) : 0,
             'conversations'=> (int) ($this->db->first('SELECT COUNT(*) c FROM conversations')['c'] ?? 0),
+            'needs_attention' => (int) ($this->db->first("SELECT COUNT(*) c FROM conversations WHERE status='needs_attention'")['c'] ?? 0),
             'messages'     => (int) ($this->db->first("SELECT COUNT(*) c FROM messages WHERE role='assistant'")['c'] ?? 0),
             'documents'    => (int) ($this->db->first("SELECT COUNT(*) c FROM documents WHERE status='ready'")['c'] ?? 0),
             'chunks'       => (int) ($this->db->first('SELECT COUNT(*) c FROM chunks')['c'] ?? 0),
@@ -246,6 +247,32 @@ final class AdminController
         $id = (int) ($params['id'] ?? 0);
         $this->conversations->setStatus($id, (string) $request->input('status', ''));
         Response::redirect('/admin/conversations/' . $id);
+    }
+
+    /** Download one session's transcript + metadata as JSON. */
+    public function exportConversation(Request $request, array $params): void
+    {
+        $id = (int) ($params['id'] ?? 0);
+        $conversation = $this->conversations->findById($id);
+        if ($conversation === null) {
+            Response::redirect('/admin/conversations');
+            return;
+        }
+        $data = [
+            'conversation' => [
+                'id' => $conversation['public_id'], 'visitor_id' => $conversation['visitor_id'],
+                'status' => $conversation['status'], 'created_at' => $conversation['created_at'],
+                'summary' => $conversation['summary'], 'total_cost_usd' => $conversation['total_cost_usd'],
+            ],
+            'messages' => array_map(static fn ($m) => [
+                'role' => $m['role'], 'content' => $m['content'], 'model' => $m['model'],
+                'cost_usd' => $m['cost_usd'], 'eval' => $m['eval'] ? json_decode((string) $m['eval'], true) : null,
+                'created_at' => $m['created_at'],
+            ], $this->messages->allForConversation($id)),
+        ];
+        header('Content-Type: application/json');
+        header('Content-Disposition: attachment; filename="session-' . $id . '.json"');
+        echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 
     public function costs(Request $request): void

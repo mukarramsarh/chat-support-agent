@@ -30,6 +30,11 @@ foreach ($daily as $d) { $max = max($max, (float) $d['cost']); }
     <div class="value"><?= number_format($stats['conversations']) ?></div>
     <div class="sub"><?= number_format($stats['messages']) ?> assistant replies</div>
   </div>
+  <a class="card stat" href="/admin/conversations?status=needs_attention" style="text-decoration:none;color:inherit">
+    <div class="label">⚠️ Needs attention</div>
+    <div class="value" style="<?= $stats['needs_attention'] > 0 ? 'color:#d97706' : '' ?>"><?= number_format($stats['needs_attention']) ?></div>
+    <div class="sub">sessions flagged for review</div>
+  </a>
   <div class="card stat">
     <div class="label">📚 Knowledge</div>
     <div class="value"><?= number_format($stats['documents']) ?></div>

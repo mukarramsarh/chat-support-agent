@@ -51,8 +51,11 @@ return function (Router $router, Container $container): void {
     $router->post('/admin/knowledge/refresh', [DocumentController::class, 'refresh'], ['admin', 'csrf']);
     $router->get('/admin/conversations', [AdminController::class, 'conversations'], ['admin']);
     $router->get('/admin/conversations/{id}', [AdminController::class, 'conversationDetail'], ['admin']);
+    $router->get('/admin/conversations/{id}/export', [AdminController::class, 'exportConversation'], ['admin']);
     $router->post('/admin/conversations/{id}/status', [AdminController::class, 'updateConversationStatus'], ['admin', 'csrf']);
     $router->get('/admin/costs', [AdminController::class, 'costs'], ['admin']);
+    $router->get('/admin/test', [EvalController::class, 'sandbox'], ['admin']);
+    $router->post('/admin/test', [EvalController::class, 'sandbox'], ['admin', 'csrf']);
     $router->get('/admin/evals', [EvalController::class, 'index'], ['admin']);
     $router->post('/admin/evals/set', [EvalController::class, 'createSet'], ['admin', 'csrf']);
     $router->post('/admin/evals/set/delete', [EvalController::class, 'deleteSet'], ['admin', 'csrf']);

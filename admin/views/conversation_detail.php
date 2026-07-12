@@ -12,7 +12,10 @@ $curStatus = $conversation['status'];
 [$label, $cls] = $statusMeta[$curStatus] ?? [$curStatus, 'mut'];
 $fmtLabel = fn ($s) => ucfirst(str_replace('_', ' ', $s));
 ?>
-<a href="/admin/conversations" style="color:var(--muted);font-size:13px">← All conversations</a>
+<div style="display:flex;justify-content:space-between;align-items:center">
+  <a href="/admin/conversations" style="color:var(--muted);font-size:13px">← All conversations</a>
+  <a class="btn ghost" href="/admin/conversations/<?= (int) $conversation['id'] ?>/export" style="padding:6px 12px;font-size:13px">⬇ Export JSON</a>
+</div>
 
 <div class="card" style="margin:12px 0 18px">
   <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:center;justify-content:space-between">

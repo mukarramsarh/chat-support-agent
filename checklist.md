@@ -19,9 +19,10 @@
 
 ## 2. Easy to use — 🟡
 - [x] Clean admin UI, live widget preview, one-line embed shortcode
+- [x] **Test-chat sandbox inside admin** (/admin/test): ask the live agent, see answer + eval badges + citations (no save)
+- [x] Empty-state guidance on most pages
 - [ ] First-run onboarding wizard (keys → agent → first knowledge → embed)
-- [ ] Inline help/tooltips; empty-state guidance on every page
-- [ ] Test-chat sandbox inside admin
+- [ ] Inline help/tooltips everywhere
 
 ## 3. Code standards, OOP & SOLID — 🟡
 - [x] Layered clean architecture (Domain/Application/Infrastructure/Http/Support)
@@ -42,14 +43,14 @@
 - [x] Conversations list page (clickable rows → detail)
 - [x] Session detail view: full transcript, citations, per-message cost/tokens, eval telemetry, latency, model
 - [x] Status filter chips + counts
+- [x] Export a session (JSON download)
 - [ ] Date/cost filters + free-text search
-- [ ] Export a session (JSON/CSV)
 
 ## 6. Per-session status labels — ✅
 - [x] Status enum: `incomplete`, `ai_answered`, `needs_attention`, `escalated`, `resolved`, `abandoned`
 - [x] Auto-derive: fallback / budget-declined / ungrounded → `needs_attention`; normal → `ai_answered`
 - [x] Manual override in admin (session detail); colored pills; list counts
-- [ ] Dashboard tile for `needs_attention` count (nice-to-have)
+- [x] Dashboard `needs_attention` tile (clickable → filtered list)
 
 ## 7. Intelligent chat memory (last ~3 turns + relevant old messages) — ✅
 - [x] Recent verbatim window (last ~3 turns) via MemoryService
