@@ -1,6 +1,7 @@
-<?php /** @var string $content @var string $title @var string $active */ ?>
+<?php /** @var string $content @var string $title @var string $active */
+use SupportAI\Support\Lang; ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= e(Lang::locale()) ?>" dir="<?= Lang::isRtl() ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -94,19 +95,23 @@
         foreach ($nav as $key => [$href, $icon, $label]):
       ?>
         <a href="<?= $href ?>" class="<?= ($active ?? '') === $key ? 'on' : '' ?>">
-          <span class="ic"><?= $icon ?></span> <?= e($label) ?>
+          <span class="ic"><?= $icon ?></span> <?= e(t($label)) ?>
         </a>
       <?php endforeach; ?>
     </nav>
     <div class="foot">
-      v0.1 · <a href="/admin/logout">Sign out</a>
+      <div style="margin-bottom:8px">
+        <a href="/admin/locale?lang=en" style="<?= Lang::locale() === 'en' ? 'color:#fff;font-weight:600' : '' ?>">EN</a>
+        · <a href="/admin/locale?lang=ar" style="<?= Lang::locale() === 'ar' ? 'color:#fff;font-weight:600' : '' ?>">العربية</a>
+      </div>
+      v0.1 · <a href="/admin/logout"><?= e(t('Sign out')) ?></a>
     </div>
   </aside>
 
   <main class="main">
     <div class="topbar">
-      <h1><?= e($title ?? '') ?></h1>
-      <a class="btn ghost" href="/demo" target="_blank">Preview widget ↗</a>
+      <h1><?= e(t($title ?? '')) ?></h1>
+      <a class="btn ghost" href="/demo" target="_blank"><?= e(t('Preview widget ↗')) ?></a>
     </div>
     <div class="content"><?= $content ?></div>
   </main>

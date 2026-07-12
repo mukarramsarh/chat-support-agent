@@ -1,6 +1,7 @@
-<?php /** @var bool $firstRun @var ?string $error */ ?>
+<?php /** @var bool $firstRun @var ?string $error */
+use SupportAI\Support\Lang; ?>
 <!doctype html>
-<html lang="en">
+<html lang="<?= e(Lang::locale()) ?>" dir="<?= Lang::isRtl() ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -29,19 +30,19 @@
   <form class="box" method="post" action="/admin/login">
     <?= csrf_field() ?>
     <div class="logo">◆</div>
-    <h1><?= $firstRun ? 'Create your account' : 'Welcome back' ?></h1>
-    <p class="sub"><?= $firstRun ? 'Set up the owner login for this install.' : 'Sign in to the support-ai admin.' ?></p>
+    <h1><?= e($firstRun ? t('Create your account') : t('Welcome back')) ?></h1>
+    <p class="sub"><?= e($firstRun ? t('Set up the owner login for this install.') : t('Sign in to the support-ai admin.')) ?></p>
 
     <?php if (!empty($error)): ?><div class="err"><?= e($error) ?></div><?php endif; ?>
     <?php if ($firstRun): ?><div class="hint">First run detected — the credentials you enter become the owner account.</div><?php endif; ?>
 
-    <label for="email">Email</label>
+    <label for="email"><?= e(t('Email')) ?></label>
     <input id="email" name="email" type="email" required autofocus placeholder="you@example.com">
 
-    <label for="password">Password</label>
+    <label for="password"><?= e(t('Password')) ?></label>
     <input id="password" name="password" type="password" required placeholder="<?= $firstRun ? 'At least 8 characters' : '••••••••' ?>">
 
-    <button class="btn" type="submit"><?= $firstRun ? 'Create account' : 'Sign in' ?></button>
+    <button class="btn" type="submit"><?= e($firstRun ? t('Create account') : t('Sign in')) ?></button>
   </form>
 </body>
 </html>

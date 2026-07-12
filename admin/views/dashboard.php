@@ -20,30 +20,30 @@ foreach ($daily as $d) { $max = max($max, (float) $d['cost']); }
 ?>
 <div class="grid cards">
   <div class="card stat">
-    <div class="label">💵 Spend this month</div>
+    <div class="label">💵 <?= e(t('Spend this month')) ?></div>
     <div class="value">$<?= $spend ?></div>
-    <div class="sub">of $<?= $budget ?> budget</div>
+    <div class="sub"><?= e(str_replace(':amount', '$' . $budget, t('of :amount budget'))) ?></div>
     <div class="bar"><span style="width:<?= round($pct, 1) ?>%;<?= $barClass==='warn'?'background:linear-gradient(90deg,#f59e0b,#ef4444)':'' ?>"></span></div>
   </div>
   <div class="card stat">
-    <div class="label">💬 Conversations</div>
+    <div class="label">💬 <?= e(t('Conversations')) ?></div>
     <div class="value"><?= number_format($stats['conversations']) ?></div>
-    <div class="sub"><?= number_format($stats['messages']) ?> assistant replies</div>
+    <div class="sub"><?= number_format($stats['messages']) ?> <?= e(t('assistant replies')) ?></div>
   </div>
   <a class="card stat" href="/admin/conversations?status=needs_attention" style="text-decoration:none;color:inherit">
-    <div class="label">⚠️ Needs attention</div>
+    <div class="label">⚠️ <?= e(t('Needs attention')) ?></div>
     <div class="value" style="<?= $stats['needs_attention'] > 0 ? 'color:#d97706' : '' ?>"><?= number_format($stats['needs_attention']) ?></div>
-    <div class="sub">sessions flagged for review</div>
+    <div class="sub"><?= e(t('sessions flagged for review')) ?></div>
   </a>
   <div class="card stat">
-    <div class="label">📚 Knowledge</div>
+    <div class="label">📚 <?= e(t('Knowledge')) ?></div>
     <div class="value"><?= number_format($stats['documents']) ?></div>
-    <div class="sub"><?= number_format($stats['chunks']) ?> indexed chunks</div>
+    <div class="sub"><?= number_format($stats['chunks']) ?> <?= e(t('indexed chunks')) ?></div>
   </div>
   <div class="card stat">
-    <div class="label">🧭 Vector store</div>
+    <div class="label">🧭 <?= e(t('Vector store')) ?></div>
     <div class="value" style="font-size:18px;margin-top:12px"><span class="pill <?= $driverClass ?>"><?= e($driverName) ?></span></div>
-    <div class="sub">auto-selected for this host</div>
+    <div class="sub"><?= e(t('auto-selected for this host')) ?></div>
   </div>
 </div>
 

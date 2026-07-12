@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use SupportAI\Support\Csrf;
 use SupportAI\Support\Env;
+use SupportAI\Support\Lang;
 
 if (!function_exists('base_path')) {
     /** Absolute path from the project root. */
@@ -26,6 +27,14 @@ if (!function_exists('e')) {
     function e(?string $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+if (!function_exists('t')) {
+    /** Translate an admin string (English default, Arabic from admin/lang/ar.php). */
+    function t(string $key, ?string $default = null): string
+    {
+        return Lang::get($key, $default);
     }
 }
 

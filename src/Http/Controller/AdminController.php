@@ -17,6 +17,7 @@ use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
+use SupportAI\Support\Lang;
 use SupportAI\Support\RateLimiter;
 use SupportAI\Support\View;
 use Throwable;
@@ -106,6 +107,16 @@ final class AdminController
         $_SESSION = [];
         session_destroy();
         Response::redirect('/admin/login');
+    }
+
+    /** Switch admin language (en|ar) and return to the previous page. */
+    public function setLocale(Request $request): void
+    {
+        Lang::setLocale((string) $request->input('lang', 'en'));
+        $ref = (string) $request->header('referer', '');
+        // Only follow same-app admin paths to avoid open-redirects.
+        $back = (str_contains($ref, '/admin') ? parse_url($ref, PHP_URL_PATH) : null) ?: '/admin';
+        Response::redirect($back);
     }
 
     // ── Pages ─────────────────────────────────────────────────────────────

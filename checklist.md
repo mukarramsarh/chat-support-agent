@@ -101,8 +101,10 @@
 - [x] **Retention policy**: configurable auto-purge (cron / web-cron)
 - [x] **Audit log** of erasures/exports (audit_log table)
 - [x] **PII encrypted at rest** (leads via Crypto)
-- [x] **RTL (Arabic)** widget layout toggle
-- [ ] Admin RTL/Arabic localisation; Hijri dates
+- [x] **RTL (Arabic)** widget layout toggle + localized widget strings
+- [x] **Admin Arabic (AR/EN) i18n + RTL**: Lang helper + `admin/lang/ar.php`, session locale switcher (EN/العربية), `dir=rtl`; nav/dashboard/login translated (extensible — untranslated keys fall back to English)
+- [x] **AI answers in the user's language** (Arabic→Arabic, English→English)
+- [ ] Full translation of every admin view; Hijri dates
 - [ ] Content safety aligned with local norms
 - [ ] ⚠ Legal/DPO review required — code enables compliance but is not legal advice
 

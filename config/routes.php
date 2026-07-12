@@ -38,6 +38,7 @@ return function (Router $router, Container $container): void {
     $router->get('/admin/login', [AdminController::class, 'loginForm']);
     $router->post('/admin/login', [AdminController::class, 'login'], ['csrf']);
     $router->get('/admin/logout', [AdminController::class, 'logout']);
+    $router->get('/admin/locale', [AdminController::class, 'setLocale'], ['admin']);
 
     $router->get('/admin', [AdminController::class, 'dashboard'], ['admin']);
     $router->get('/admin/agent', [AdminController::class, 'agent'], ['admin']);
