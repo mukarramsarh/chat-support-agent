@@ -11,6 +11,7 @@ use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\DocumentRepository;
+use SupportAI\Infrastructure\Persistence\JobQueueRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
 use Throwable;
@@ -37,6 +38,7 @@ final class DocumentController
         private DocumentRepository $documents,
         private ChunkRepository $chunks,
         private VectorStoreFactory $vectors,
+        private JobQueueRepository $jobs,
         private Config $config,
     ) {
         if (session_status() !== PHP_SESSION_ACTIVE) {
@@ -70,6 +72,15 @@ final class DocumentController
             return;
         }
         $minutes = self::INTERVALS[(string) $request->input('refresh', 'off')] ?? 0;
+
+        // Background path (opt-in): queue each URL for the cron worker.
+        if ($this->config->bool('app.ingest_async', false)) {
+            foreach ($urls as $url) {
+                $this->jobs->enqueue('ingest.url', ['agent_id' => $agentId, 'url' => $url, 'refresh_minutes' => $minutes]);
+            }
+            $this->finish('ok', 'Queued ' . count($urls) . ' URL(s) for background processing (runs on the next cron tick).');
+            return;
+        }
 
         $added = 0;
         $errors = [];
@@ -147,6 +158,18 @@ final class DocumentController
         }
 
         $title = pathinfo($file['name'], PATHINFO_FILENAME);
+
+        // Background path (opt-in): queue for the cron worker, which unlinks the
+        // stored file after processing. Good for large PDFs that could time out.
+        if ($this->config->bool('app.ingest_async', false)) {
+            $this->jobs->enqueue('ingest.file', [
+                'agent_id' => $agentId, 'source_type' => $type, 'path' => $dest,
+                'title' => $title, 'filename' => $file['name'],
+            ]);
+            $this->finish('ok', 'File uploaded and queued for background processing (runs on the next cron tick).');
+            return;
+        }
+
         try {
             $this->run(fn () => $this->ingestion->ingest($agentId, $type, [
                 'path' => $dest, 'title' => $title, 'filename' => $file['name'],

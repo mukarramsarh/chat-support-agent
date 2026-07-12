@@ -17,6 +17,7 @@ use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Application\Compliance\PrivacyFilter;
 use SupportAI\Application\Ingestion\Chunker;
 use SupportAI\Application\Ingestion\IngestionService;
+use SupportAI\Application\Ingestion\IngestionWorker;
 use SupportAI\Application\Ingestion\RecrawlService;
 use SupportAI\Application\Ingestion\TextExtractor;
 use SupportAI\Http\Controller\AdminController;
@@ -33,6 +34,7 @@ use SupportAI\Infrastructure\Persistence\AuditRepository;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\DocumentRepository;
+use SupportAI\Infrastructure\Persistence\JobQueueRepository;
 use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\MemoryRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
@@ -76,6 +78,7 @@ $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get
 $c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
 $c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
 $c->set(MemoryRepository::class, fn (Container $c) => new MemoryRepository($c->get(Database::class)));
+$c->set(JobQueueRepository::class, fn (Container $c) => new JobQueueRepository($c->get(Database::class)));
 $c->set(LeadRepository::class, fn (Container $c) => new LeadRepository($c->get(Database::class), $c->get(Crypto::class)));
 $c->set(AnswerCacheRepository::class, fn (Container $c) => new AnswerCacheRepository($c->get(Database::class)));
 $c->set(AuditRepository::class, fn (Container $c) => new AuditRepository($c->get(Database::class)));
@@ -132,6 +135,12 @@ $c->set(RecrawlService::class, fn (Container $c) => new RecrawlService(
     $c->get(IngestionService::class),
     $c->get(Logger::class),
 ));
+$c->set(IngestionWorker::class, fn (Container $c) => new IngestionWorker(
+    $c->get(JobQueueRepository::class),
+    $c->get(IngestionService::class),
+    $c->get(DocumentRepository::class),
+    $c->get(Logger::class),
+));
 
 // ── Application services ──
 $c->set(MemoryService::class, fn (Container $c) => new MemoryService($c->get(MessageRepository::class)));
@@ -171,6 +180,7 @@ $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
     $c->get(DocumentRepository::class),
     $c->get(ChunkRepository::class),
     $c->get(VectorStoreFactory::class),
+    $c->get(JobQueueRepository::class),
     $c->get(Config::class),
 ));
 $c->set(AdminController::class, fn (Container $c) => new AdminController(

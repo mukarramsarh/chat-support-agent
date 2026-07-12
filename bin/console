@@ -40,7 +40,10 @@ switch ($command) {
         break;
 
     case 'cron':
-        // 1) Refresh URL sources that are due for a recrawl.
+        // 1a) Drain queued ingestion jobs (background path for large sources).
+        $jobs = $c->get(SupportAI\Application\Ingestion\IngestionWorker::class)->process(10);
+        echo "cron: ingestion jobs done {$jobs['done']}, failed {$jobs['failed']}.\n";
+        // 1b) Refresh URL sources that are due for a recrawl.
         $r = $c->get(SupportAI\Application\Ingestion\RecrawlService::class)->refreshDue(5);
         echo "cron: recrawl checked {$r['checked']} (updated {$r['updated']}, unchanged {$r['unchanged']}, failed {$r['failed']}).\n";
         // 2) Long-term memory: summarise + extract facts from grown conversations.

@@ -26,6 +26,7 @@ final class Config
                 'url'      => rtrim((string) Env::get('APP_URL', ''), '/'),
                 'key'      => (string) Env::get('APP_KEY', ''),
                 'timezone' => Env::get('APP_TIMEZONE', 'UTC'),
+                'ingest_async' => self::toBool(Env::get('INGEST_ASYNC', 'false')),
             ],
             'db' => [
                 'host'    => Env::get('DB_HOST', '127.0.0.1'),

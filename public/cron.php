@@ -25,7 +25,11 @@ if ($expected === '' || !hash_equals($expected, (string) $given)) {
 
 header('Content-Type: text/plain');
 
-// 1) Refresh URL sources due for a recrawl (each isolated; failures don't block).
+// 1a) Drain queued ingestion jobs (background path for large sources).
+$jobs = $c->get(SupportAI\Application\Ingestion\IngestionWorker::class)->process(10);
+echo "OK — ingestion jobs done {$jobs['done']}, failed {$jobs['failed']}.\n";
+
+// 1b) Refresh URL sources due for a recrawl (each isolated; failures don't block).
 $r = $c->get(SupportAI\Application\Ingestion\RecrawlService::class)->refreshDue(5);
 echo "OK — recrawl checked {$r['checked']} (updated {$r['updated']}, unchanged {$r['unchanged']}, failed {$r['failed']}).\n";
 
