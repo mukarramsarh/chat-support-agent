@@ -11,8 +11,10 @@ use SupportAI\Domain\LLM\Message;
 use SupportAI\Domain\LLM\Usage;
 use SupportAI\Http\SseStream;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
+use SupportAI\Infrastructure\Persistence\AnswerCacheRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
+use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Support\Config;
 use SupportAI\Support\Logger;
@@ -41,6 +43,8 @@ final class ChatService
         private ConversationRepository $conversations,
         private MessageRepository $messages,
         private UsageRepository $usage,
+        private AnswerCacheRepository $answerCache,
+        private SettingsRepository $settings,
         private Config $config,
         private Logger $logger,
     ) {
@@ -64,6 +68,16 @@ final class ChatService
             $this->logger->warning('Monthly budget reached; declining', ['agent' => $agentId]);
             $this->declineForBudget($agent, $conversationId, $sse);
             return;
+        }
+
+        // ── Answer cache: skip the LLM entirely on a repeat question ──
+        if ($this->config->bool('budget.answer_cache', true)) {
+            $normQuery = AnswerCacheRepository::normalize($userText);
+            $cached = $this->answerCache->get($agentId, $normQuery, $this->settings->kbVersion());
+            if ($cached !== null) {
+                $this->serveFromCache($conversation, $cached, $sse, $startedAt);
+                return;
+            }
         }
 
         // ── Retrieve knowledge + memory ──
@@ -164,6 +178,11 @@ final class ChatService
             || ($context->hasKnowledge && !$eval['grounded']);
         $this->conversations->setStatus($conversationId, $needsAttention ? 'needs_attention' : 'ai_answered');
 
+        // Cache only trustworthy answers (sent + grounded when knowledge was used).
+        if ($verdict === 'sent' && (!$context->hasKnowledge || $eval['grounded'])) {
+            $this->cacheAnswer($agentId, $userText, $answer, $context->citations);
+        }
+
         $sse->event('done', [
             'usage'      => ['tokens_in' => $totalUsage->inputTokens, 'tokens_out' => $totalUsage->outputTokens, 'cost_usd' => $totalCost],
             'latency_ms' => $latency,
@@ -210,6 +229,10 @@ final class ChatService
 
         $needsAttention = $usedFallback || (!$context->hasKnowledge && $context->topScore > 0.0);
         $this->conversations->setStatus($conversationId, $needsAttention ? 'needs_attention' : 'ai_answered');
+
+        if (!$usedFallback) {
+            $this->cacheAnswer($agentId, $userText, $answer, $context->citations);
+        }
 
         $sse->event('done', [
             'usage'      => ['tokens_in' => $usage->inputTokens, 'tokens_out' => $usage->outputTokens, 'cost_usd' => $cost],
@@ -365,6 +388,42 @@ final class ChatService
         if ($buffer !== '') {
             $sse->token($buffer);
         }
+    }
+
+    /** Serve a cached FAQ answer without touching the LLM. */
+    private function serveFromCache(array $conversation, array $cached, SseStream $sse, int $startedAt): void
+    {
+        $conversationId = (int) $conversation['id'];
+        $citations = $cached['citations'] ? json_decode((string) $cached['citations'], true) : [];
+        $citations = is_array($citations) ? $citations : [];
+
+        $sse->event('meta', ['conversation_id' => $conversation['public_id'], 'citations' => $citations]);
+        $this->emitChunks($sse, (string) $cached['answer']);
+
+        $latency = (int) (microtime(true) * 1000) - $startedAt;
+        $this->messages->addAssistant(
+            $conversationId, (string) $cached['answer'], 'cache', new Usage(), 0.0, $citations,
+            ['verdict' => 'cached', 'grounded' => true], $latency,
+        );
+        $this->conversations->touch($conversationId, 0.0);
+        $this->conversations->setStatus($conversationId, 'ai_answered');
+        $this->usage->record('cache', 'cache', 'chat', new Usage(), $conversationId ? (int) $conversation['agent_id'] : null, $conversationId, true);
+
+        $sse->event('done', [
+            'usage'      => ['tokens_in' => 0, 'tokens_out' => 0, 'cost_usd' => 0, 'cached' => true],
+            'latency_ms' => $latency,
+        ]);
+    }
+
+    private function cacheAnswer(int $agentId, string $userText, string $answer, array $citations): void
+    {
+        if (!$this->config->bool('budget.answer_cache', true) || trim($answer) === '') {
+            return;
+        }
+        $this->answerCache->put(
+            $agentId, $userText, AnswerCacheRepository::normalize($userText),
+            $this->settings->kbVersion(), $answer, $citations,
+        );
     }
 
     private function declineForBudget(array $agent, int $conversationId, SseStream $sse): void

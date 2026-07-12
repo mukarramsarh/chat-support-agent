@@ -62,21 +62,25 @@ final class RagRetriever implements ContextRetriever
                 return RetrievedContext::empty();
             }
 
-            // 2) Vector search scoped to this agent.
+            // 2) Vector (semantic) search scoped to this agent.
             $matches = $this->vectors->make()->query('chunks', $vector, $topK, ['agent_id' => $agentId]);
             if ($matches === []) {
                 return RetrievedContext::empty();
             }
 
-            // 3) Free gate: nothing relevant enough → let the agent say it doesn't know.
+            // 3) Free gate: nothing semantically relevant → let the agent decline.
             $topScore = $matches[0]->score;
             if ($topScore < $minScore) {
                 $this->logger->info('RAG: below min-score gate', ['top' => $topScore, 'min' => $minScore]);
                 return new RetrievedContext('', [], $topScore, false);
             }
 
-            // 4) Take the best final_k and load their text.
-            $bestIds = array_map(static fn ($m) => $m->id, array_slice($matches, 0, $finalK));
+            // 4) Hybrid: blend vector scores with FULLTEXT keyword scores so exact
+            //    terms/codes/names get boosted. Keyword hits only re-rank within
+            //    the relevant set — they never override the semantic gate above.
+            $bestIds = $this->hybridRank($matches, $agentId, $query, $finalK);
+
+            // 5) Load the selected chunks' text (ordered by combined rank).
             $rows = $this->chunks->findByIds($bestIds);
             if ($rows === []) {
                 return RetrievedContext::empty();
@@ -103,5 +107,38 @@ final class RagRetriever implements ContextRetriever
             $this->logger->error('RAG retrieval failed', ['error' => $e->getMessage()]);
             return RetrievedContext::empty();
         }
+    }
+
+    /**
+     * Combine dense (vector) and lexical (FULLTEXT) rankings into a single top-K.
+     * Vector scores are already ~[0,1]; keyword scores are normalised to their
+     * own max. A chunk appearing in both is boosted (its scores sum).
+     *
+     * @param \SupportAI\Domain\Vector\VectorMatch[] $matches
+     * @return int[] chunk ids, best-first
+     */
+    private function hybridRank(array $matches, int $agentId, string $query, int $finalK): array
+    {
+        $wVector = 0.7;
+        $wKeyword = 0.3;
+
+        $scores = [];
+        foreach ($matches as $m) {
+            $scores[$m->id] = $wVector * $m->score;
+        }
+
+        $keyword = $this->chunks->fulltextSearch($agentId, $query, count($matches) ?: 20);
+        $maxKw = 0.0;
+        foreach ($keyword as $k) {
+            $maxKw = max($maxKw, $k['score']);
+        }
+        if ($maxKw > 0.0) {
+            foreach ($keyword as $k) {
+                $scores[$k['id']] = ($scores[$k['id']] ?? 0.0) + $wKeyword * ($k['score'] / $maxKw);
+            }
+        }
+
+        arsort($scores);
+        return array_slice(array_keys($scores), 0, $finalK);
     }
 }

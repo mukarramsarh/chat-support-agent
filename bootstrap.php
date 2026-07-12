@@ -27,6 +27,7 @@ use SupportAI\Infrastructure\LLM\Pricing;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\Persistence\AnswerCacheRepository;
 use SupportAI\Infrastructure\Persistence\AuditRepository;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
@@ -73,6 +74,7 @@ $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get
 $c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
 $c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
 $c->set(LeadRepository::class, fn (Container $c) => new LeadRepository($c->get(Database::class), $c->get(Crypto::class)));
+$c->set(AnswerCacheRepository::class, fn (Container $c) => new AnswerCacheRepository($c->get(Database::class)));
 $c->set(AuditRepository::class, fn (Container $c) => new AuditRepository($c->get(Database::class)));
 
 // ── Compliance / privacy ──
@@ -129,6 +131,8 @@ $c->set(ChatService::class, fn (Container $c) => new ChatService(
     $c->get(ConversationRepository::class),
     $c->get(MessageRepository::class),
     $c->get(UsageRepository::class),
+    $c->get(AnswerCacheRepository::class),
+    $c->get(SettingsRepository::class),
     $c->get(Config::class),
     $c->get(Logger::class),
 ));

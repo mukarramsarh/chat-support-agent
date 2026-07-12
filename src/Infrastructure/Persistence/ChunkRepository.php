@@ -51,6 +51,35 @@ final class ChunkRepository
     }
 
     /**
+     * FULLTEXT keyword search over an agent's chunks — the lexical half of hybrid
+     * retrieval. Catches exact terms/codes/names that dense vectors sometimes
+     * miss. Degrades to [] if the index is absent or the query has no usable terms.
+     *
+     * @return array<int,array{id:int,score:float}>
+     */
+    public function fulltextSearch(int $agentId, string $query, int $limit = 20): array
+    {
+        if (trim($query) === '') {
+            return [];
+        }
+        $limit = max(1, min(100, $limit));
+        try {
+            $rows = $this->db->all(
+                "SELECT id, MATCH(content) AGAINST (:q IN NATURAL LANGUAGE MODE) AS score
+                   FROM chunks
+                  WHERE agent_id = :a
+                    AND MATCH(content) AGAINST (:q2 IN NATURAL LANGUAGE MODE)
+               ORDER BY score DESC
+                  LIMIT " . $limit,
+                ['a' => $agentId, 'q' => $query, 'q2' => $query]
+            );
+            return array_map(static fn ($r) => ['id' => (int) $r['id'], 'score' => (float) $r['score']], $rows);
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
      * Fetch chunks by id (with their document title/uri for citations),
      * returned in the SAME order as $ids (i.e. ranked by the caller).
      *
