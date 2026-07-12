@@ -65,6 +65,30 @@ final class ConversationRepository
         $this->db->run('UPDATE conversations SET summary = :s WHERE id = :id', ['s' => $summary, 'id' => $id]);
     }
 
+    /**
+     * Conversations that have grown enough since their last summarisation/fact
+     * extraction to be worth (re)processing by the cron memory job.
+     *
+     * @return array<int,array<string,mixed>>
+     */
+    public function findNeedingMaintenance(int $minMessages, int $growth, int $limit): array
+    {
+        $limit = max(1, min(50, $limit));
+        return $this->db->all(
+            "SELECT * FROM conversations
+              WHERE message_count >= :min
+                AND (message_count - maintained_upto) >= :grow
+           ORDER BY updated_at ASC
+              LIMIT " . $limit,
+            ['min' => $minMessages, 'grow' => $growth]
+        );
+    }
+
+    public function setMaintainedUpto(int $id, int $upto): void
+    {
+        $this->db->run('UPDATE conversations SET maintained_upto = :u WHERE id = :id', ['u' => $upto, 'id' => $id]);
+    }
+
     public function setStatus(int $id, string $status): void
     {
         if (!in_array($status, self::STATUSES, true)) {

@@ -52,13 +52,13 @@
 - [x] Manual override in admin (session detail); colored pills; list counts
 - [ ] Dashboard tile for `needs_attention` count (nice-to-have)
 
-## 7. Intelligent chat memory (last ~3 turns + relevant old messages) — 🟡
+## 7. Intelligent chat memory (last ~3 turns + relevant old messages) — ✅
 - [x] Recent verbatim window (last ~3 turns) via MemoryService
-- [x] Retrieve relevant OLDER messages across the visitor's sessions (FULLTEXT recall, zero token cost; degrades safely)
-- [x] Injected into prompt as recall block; rolling summary slot wired
-- [ ] Upgrade recall to embedding-based (semantic) for small histories where FULLTEXT underperforms
-- [ ] Long-term fact extraction into `memories`, retrieved like knowledge
-- [ ] Summarize + drop old turns to cap tokens
+- [x] Retrieve relevant OLDER messages across the visitor's sessions (FULLTEXT recall, zero token cost)
+- [x] **Long-term facts** extracted into `memories` (cron, utility model), embedded, semantically recalled by RagRetriever (reuses the query vector — no extra cost), injected as a "what you know about this user" block
+- [x] **Rolling summaries** — cron compresses long conversations into `conversations.summary` (sent instead of full history)
+- [x] Cron memory maintenance (`maintained_upto` marker so only new turns processed); dedupes facts
+- [ ] Optional: embedding-based recall of raw messages for very small histories (FULLTEXT already covers most)
 
 ## 8. Solid RAG flow — 🟡
 - [x] Ingestion → chunks + embeddings stored (text/URL/PDF/DOCX)

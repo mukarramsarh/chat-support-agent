@@ -10,6 +10,7 @@ declare(strict_types=1);
 
 use SupportAI\Application\Chat\ChatService;
 use SupportAI\Application\Chat\ContextRetriever;
+use SupportAI\Application\Chat\MemoryMaintenanceService;
 use SupportAI\Application\Chat\MemoryService;
 use SupportAI\Application\Chat\RagRetriever;
 use SupportAI\Application\Compliance\ComplianceService;
@@ -33,6 +34,7 @@ use SupportAI\Infrastructure\Persistence\ChunkRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\DocumentRepository;
 use SupportAI\Infrastructure\Persistence\LeadRepository;
+use SupportAI\Infrastructure\Persistence\MemoryRepository;
 use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
@@ -73,6 +75,7 @@ $c->set(AdminUserRepository::class, fn (Container $c) => new AdminUserRepository
 $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get(Database::class), $c->get(Pricing::class)));
 $c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
 $c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
+$c->set(MemoryRepository::class, fn (Container $c) => new MemoryRepository($c->get(Database::class)));
 $c->set(LeadRepository::class, fn (Container $c) => new LeadRepository($c->get(Database::class), $c->get(Crypto::class)));
 $c->set(AnswerCacheRepository::class, fn (Container $c) => new AnswerCacheRepository($c->get(Database::class)));
 $c->set(AuditRepository::class, fn (Container $c) => new AuditRepository($c->get(Database::class)));
@@ -95,9 +98,18 @@ $c->set(ContextRetriever::class, fn (Container $c) => new RagRetriever(
     $c->get(ProviderFactory::class),
     $c->get(VectorStoreFactory::class),
     $c->get(ChunkRepository::class),
+    $c->get(MemoryRepository::class),
     $c->get(UsageRepository::class),
     $c->get(PrivacyFilter::class),
     $c->get(Config::class),
+    $c->get(Logger::class),
+));
+$c->set(MemoryMaintenanceService::class, fn (Container $c) => new MemoryMaintenanceService(
+    $c->get(ConversationRepository::class),
+    $c->get(MessageRepository::class),
+    $c->get(MemoryRepository::class),
+    $c->get(ProviderFactory::class),
+    $c->get(UsageRepository::class),
     $c->get(Logger::class),
 ));
 

@@ -43,7 +43,10 @@ switch ($command) {
         // 1) Refresh URL sources that are due for a recrawl.
         $r = $c->get(SupportAI\Application\Ingestion\RecrawlService::class)->refreshDue(5);
         echo "cron: recrawl checked {$r['checked']} (updated {$r['updated']}, unchanged {$r['unchanged']}, failed {$r['failed']}).\n";
-        // 2) Storage-limitation: purge data past the retention window.
+        // 2) Long-term memory: summarise + extract facts from grown conversations.
+        $mem = $c->get(SupportAI\Application\Chat\MemoryMaintenanceService::class)->process(5);
+        echo "cron: memory processed {$mem['processed']} conversation(s), +{$mem['facts']} fact(s).\n";
+        // 3) Storage-limitation: purge data past the retention window.
         $purged = $c->get(SupportAI\Application\Compliance\ComplianceService::class)->purge();
         echo "cron: retention purge removed {$purged} conversation(s).\n";
         break;

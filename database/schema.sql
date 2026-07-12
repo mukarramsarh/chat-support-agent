@@ -154,6 +154,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     page_url      VARCHAR(1000) NULL,                 -- where the chat started
     metadata      JSON          NULL,
     message_count INT UNSIGNED  NOT NULL DEFAULT 0,
+    maintained_upto INT UNSIGNED NOT NULL DEFAULT 0,  -- summarised/fact-extracted up to this message_count
     total_cost_usd DECIMAL(12,6) NOT NULL DEFAULT 0,
     created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

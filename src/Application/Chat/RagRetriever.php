@@ -7,6 +7,7 @@ namespace SupportAI\Application\Chat;
 use SupportAI\Application\Compliance\PrivacyFilter;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\ChunkRepository;
+use SupportAI\Infrastructure\Persistence\MemoryRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
@@ -33,6 +34,7 @@ final class RagRetriever implements ContextRetriever
         private ProviderFactory $providers,
         private VectorStoreFactory $vectors,
         private ChunkRepository $chunks,
+        private MemoryRepository $memories,
         private UsageRepository $usage,
         private PrivacyFilter $privacy,
         private Config $config,
@@ -62,31 +64,36 @@ final class RagRetriever implements ContextRetriever
                 return RetrievedContext::empty();
             }
 
-            // 2) Vector (semantic) search scoped to this agent.
+            // 2) Long-term memory: recall this visitor's durable facts using the
+            //    SAME query vector (no extra embedding cost). Included even when no
+            //    knowledge matches, so the agent still "remembers" the user.
+            $factsBlock = $this->recallFacts($agentId, $visitorId, $vector);
+
+            // 3) Vector (semantic) search scoped to this agent.
             $matches = $this->vectors->make()->query('chunks', $vector, $topK, ['agent_id' => $agentId]);
             if ($matches === []) {
-                return RetrievedContext::empty();
+                return new RetrievedContext($factsBlock, [], 0.0, false);
             }
 
-            // 3) Free gate: nothing semantically relevant → let the agent decline.
+            // 4) Free gate: nothing semantically relevant → decline (but keep facts).
             $topScore = $matches[0]->score;
             if ($topScore < $minScore) {
                 $this->logger->info('RAG: below min-score gate', ['top' => $topScore, 'min' => $minScore]);
-                return new RetrievedContext('', [], $topScore, false);
+                return new RetrievedContext($factsBlock, [], $topScore, false);
             }
 
-            // 4) Hybrid: blend vector scores with FULLTEXT keyword scores so exact
+            // 5) Hybrid: blend vector scores with FULLTEXT keyword scores so exact
             //    terms/codes/names get boosted. Keyword hits only re-rank within
             //    the relevant set — they never override the semantic gate above.
             $bestIds = $this->hybridRank($matches, $agentId, $query, $finalK);
 
-            // 5) Load the selected chunks' text (ordered by combined rank).
+            // 6) Load the selected chunks' text (ordered by combined rank).
             $rows = $this->chunks->findByIds($bestIds);
             if ($rows === []) {
-                return RetrievedContext::empty();
+                return new RetrievedContext($factsBlock, [], $topScore, false);
             }
 
-            // 5) Build a numbered KNOWLEDGE block + citations.
+            // 7) Build a numbered KNOWLEDGE block + citations.
             $block = '';
             $citations = [];
             $n = 0;
@@ -101,12 +108,30 @@ final class RagRetriever implements ContextRetriever
                 ];
             }
 
-            return new RetrievedContext(trim($block), $citations, $topScore, true);
+            $full = $factsBlock !== '' ? $factsBlock . "\n\n" . trim($block) : trim($block);
+            return new RetrievedContext($full, $citations, $topScore, true);
         } catch (Throwable $e) {
             // RAG must never break chat — degrade to persona-only answering.
             $this->logger->error('RAG retrieval failed', ['error' => $e->getMessage()]);
             return RetrievedContext::empty();
         }
+    }
+
+    /** Build the "what we know about this user" block from durable memories. */
+    private function recallFacts(int $agentId, ?string $visitorId, array $vector): string
+    {
+        if ($visitorId === null || $visitorId === '') {
+            return '';
+        }
+        $facts = $this->memories->searchRelevant($agentId, $visitorId, $vector, 3, 0.2);
+        if ($facts === []) {
+            return '';
+        }
+        $block = "WHAT YOU KNOW ABOUT THIS USER (from earlier chats):\n";
+        foreach ($facts as $f) {
+            $block .= '- ' . $f['content'] . "\n";
+        }
+        return trim($block);
     }
 
     /**

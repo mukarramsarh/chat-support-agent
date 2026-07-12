@@ -29,6 +29,10 @@ header('Content-Type: text/plain');
 $r = $c->get(SupportAI\Application\Ingestion\RecrawlService::class)->refreshDue(5);
 echo "OK — recrawl checked {$r['checked']} (updated {$r['updated']}, unchanged {$r['unchanged']}, failed {$r['failed']}).\n";
 
-// 2) Storage-limitation: purge data past the retention window (PDPL).
+// 2) Long-term memory: summarise + extract facts from grown conversations.
+$mem = $c->get(SupportAI\Application\Chat\MemoryMaintenanceService::class)->process(5);
+echo "memory processed {$mem['processed']} conversation(s), +{$mem['facts']} fact(s).\n";
+
+// 3) Storage-limitation: purge data past the retention window (PDPL).
 $purged = $c->get(SupportAI\Application\Compliance\ComplianceService::class)->purge();
 echo "retention purge removed {$purged} conversation(s).\n";
