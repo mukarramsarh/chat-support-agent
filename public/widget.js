@@ -37,6 +37,21 @@
     welcome: 'Hi! How can I help you today?', form: null, rtl: false
   };
 
+  // UI strings, picked by direction (Arabic when rtl).
+  function strings() {
+    return cfg.rtl ? {
+      placeholder: 'اكتب رسالتك…', powered: 'مدعوم بواسطة support-ai', start: 'ابدأ المحادثة',
+      netErr: 'تعذّر الوصول إلى الخادم. حاول مرة أخرى.', genErr: 'حدث خطأ ما.',
+      fillReq: 'يرجى تعبئة الحقول المطلوبة.', agree: 'يرجى الموافقة للمتابعة.',
+      submitErr: 'تعذّر الإرسال. حاول مرة أخرى.', checkDetails: 'يرجى التحقق من بياناتك.', privacy: 'الخصوصية'
+    } : {
+      placeholder: 'Type your message…', powered: 'Powered by support-ai', start: 'Start chat',
+      netErr: 'I could not reach the server. Please try again.', genErr: 'Something went wrong.',
+      fillReq: 'Please fill the required fields.', agree: 'Please accept to continue.',
+      submitErr: 'Could not submit. Please try again.', checkDetails: 'Please check your details.', privacy: 'Privacy'
+    };
+  }
+
   fetch(API_BASE + '/api/widget/config')
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (data) {
@@ -71,6 +86,7 @@
     var log = root.getElementById('sa-log');
     var gate = root.getElementById('sa-gate');
     var open = false, greeted = false;
+    var S = strings();
 
     if (cfg.rtl) { panel.setAttribute('dir', 'rtl'); }
 
@@ -129,10 +145,10 @@
       if (f.consent_required) {
         html += '<label class="sa-gate-consent"><input type="checkbox" class="sa-gate-agree"> <span>' +
                 esc(f.consent_text || 'I agree to the processing of my data.') +
-                (f.privacy_url ? ' <a href="' + esc(f.privacy_url) + '" target="_blank">Privacy</a>' : '') + '</span></label>';
+                (f.privacy_url ? ' <a href="' + esc(f.privacy_url) + '" target="_blank">' + esc(S.privacy) + '</a>' : '') + '</span></label>';
       }
       html += '<div class="sa-gate-err" style="display:none"></div>' +
-              '<button class="sa-gate-btn" type="button">Start chat</button>';
+              '<button class="sa-gate-btn" type="button">' + esc(S.start) + '</button>';
       gate.innerHTML = html;
       gate.style.display = '';
 
@@ -148,14 +164,14 @@
         });
         var agree = gate.querySelector('.sa-gate-agree');
         if (agree) { payload.consent = agree.checked; }
-        if (!ok) { return fail('Please fill the required fields.'); }
-        if (f.consent_required && !payload.consent) { return fail('Please accept to continue.'); }
+        if (!ok) { return fail(S.fillReq); }
+        if (f.consent_required && !payload.consent) { return fail(S.agree); }
 
         fetch(API_BASE + '/api/chat/lead', {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
           .then(function (res) {
-            if (!res.ok) { return fail(res.d && res.d.error ? res.d.error : 'Please check your details.'); }
+            if (!res.ok) { return fail(res.d && res.d.error ? res.d.error : S.checkDetails); }
             if (res.d.conversation_id) { conversationId = res.d.conversation_id; LS.setItem('sa_conversation_' + AGENT, conversationId); }
             LS.setItem('sa_lead_' + AGENT, '1');
             showChat();
@@ -207,13 +223,13 @@
             bubble.textContent += payload.text; scroll();
           } else if (event === 'error') {
             if (typing.parentNode) { typing.remove(); }
-            addMessage('bot', payload.message || 'Something went wrong.');
+            addMessage('bot', payload.message || S.genErr);
           }
         }
         return pump();
       }).catch(function () {
         if (typing.parentNode) { typing.remove(); }
-        addMessage('bot', 'I could not reach the server. Please try again.');
+        addMessage('bot', S.netErr);
         cleanup();
       });
       function cleanup() { delete form.dataset.busy; scroll(); }
@@ -235,6 +251,7 @@
 
   function template() {
     var side = cfg.position === 'left' ? 'left:24px' : 'right:24px';
+    var S = strings();
     return '' +
     '<style>' +
     ':host{all:initial}' +
@@ -283,9 +300,9 @@
         '<button id="sa-close" aria-label="Close">×</button></div>' +
       '<div id="sa-gate"></div>' +
       '<div id="sa-log"></div>' +
-      '<form id="sa-form"><input id="sa-input" autocomplete="off" placeholder="Type your message…" />' +
+      '<form id="sa-form"><input id="sa-input" autocomplete="off" placeholder="' + esc(S.placeholder) + '" />' +
         '<button type="submit" aria-label="Send">➤</button></form>' +
-      '<div class="sa-foot">Powered by support-ai</div>' +
+      '<div class="sa-foot">' + esc(S.powered) + '</div>' +
     '</div>';
   }
 
