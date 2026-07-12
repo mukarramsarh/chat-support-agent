@@ -16,6 +16,9 @@
   }
   var API_BASE = new URL(self.src).origin + new URL(self.src).pathname.replace(/\/widget\.js.*$/, '');
   var AGENT = self.getAttribute('data-agent') || '';
+  // data-launcher="off" hides the floating bubble so you can open chat from your
+  // own link/button instead (see the data-support-ai-open trigger below).
+  var HIDE_LAUNCHER = (self.getAttribute('data-launcher') || '').toLowerCase() === 'off';
 
   var LS = window.localStorage;
   function id(key, make) {
@@ -79,6 +82,20 @@
     }
     launcher.addEventListener('click', function () { toggle(!open); });
     closeBtn.addEventListener('click', function () { toggle(false); });
+
+    if (HIDE_LAUNCHER) { launcher.style.display = 'none'; }
+
+    // Public API — call from your own link/button: window.supportAI.open()
+    window.supportAI = {
+      open: function () { toggle(true); },
+      close: function () { toggle(false); },
+      toggle: function () { toggle(!open); }
+    };
+    // Any element with data-support-ai-open becomes a trigger (delegated).
+    document.addEventListener('click', function (e) {
+      var t = e.target.closest ? e.target.closest('[data-support-ai-open]') : null;
+      if (t) { e.preventDefault(); toggle(true); }
+    });
 
     // Decide whether to show the pre-chat form or go straight to chat.
     function needGate() {

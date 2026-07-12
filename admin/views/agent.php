@@ -84,9 +84,15 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
     <!-- ── Embed ── -->
     <div class="card">
       <h3>Embed code</h3>
-      <p style="color:var(--muted);font-size:13px;margin-top:0">Add to any page to go live:</p>
+      <p style="color:var(--muted);font-size:13px;margin-top:0"><strong>Option A — floating bubble.</strong> Add to any page:</p>
       <pre style="background:#0b1020;color:#e2e8f0;border-radius:10px;padding:14px;font-size:12px;overflow:auto;white-space:pre-wrap;word-break:break-all"><code>&lt;script src="<?= e($app_url ?? '') ?>/widget.js"
   data-agent="<?= $val('public_id') ?>" defer&gt;&lt;/script&gt;</code></pre>
+      <p style="color:var(--muted);font-size:13px;margin:14px 0 0"><strong>Option B — open from your own link/button.</strong> Hide the bubble and trigger it yourself:</p>
+      <pre style="background:#0b1020;color:#e2e8f0;border-radius:10px;padding:14px;font-size:12px;overflow:auto;white-space:pre-wrap;word-break:break-all"><code>&lt;script src="<?= e($app_url ?? '') ?>/widget.js"
+  data-agent="<?= $val('public_id') ?>" data-launcher="off" defer&gt;&lt;/script&gt;
+
+&lt;a href="#" data-support-ai-open&gt;Chat with us&lt;/a&gt;
+&lt;!-- or: &lt;button onclick="supportAI.open()"&gt;Need help?&lt;/button&gt; --&gt;</code></pre>
       <div class="field" style="margin-top:14px"><label>Allowed embed domains</label>
         <textarea name="allowed_domains" placeholder="example.com&#10;support.example.com" style="min-height:70px"><?= e($allowed_domains ?? '') ?></textarea>
         <div class="hint">One host per line/comma. Restricts which sites may call the chat API (CORS). Leave blank to allow any (not recommended for production).</div></div>

@@ -106,7 +106,8 @@ final class WidgetController
             <h1>Support widget preview</h1>
             <p>This page embeds the widget exactly as a customer's site would, using the shortcode below.</p>
             <p><code>&lt;script src="{$base}/widget.js" data-agent="{$publicId}" defer&gt;&lt;/script&gt;</code></p>
-            <p>Click the launcher in the corner to start chatting.</p>
+            <p>Click the launcher in the corner to start chatting, or use this inline trigger:</p>
+            <p><a href="#" data-support-ai-open style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:600">💬 Chat with us</a></p>
           </div>
           <script src="{$base}/widget.js" data-agent="{$publicId}" defer></script>
         </body></html>

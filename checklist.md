@@ -121,14 +121,14 @@
 - [x] Validation (required, email); PII stored encrypted; respects retention/erasure
 - [ ] Show decrypted lead in the session detail view (nice-to-have)
 
-## 14. Second shortcode — launch chat from a link/button — ⬜
+## 14. Second shortcode — launch chat from a link/button — ✅
 Two ways to embed, sharing one widget instance:
-- [x] Shortcode A (exists): auto floating launcher — `<script src="…/widget.js" data-agent="…">`
-- [ ] Shortcode B (new): a clickable **link/button** that opens the chat on click, for placing inline (e.g. "Chat with us" in a nav/CTA)
-- [ ] Widget exposes a global open API — `window.supportAI.open()` / `.close()` / `.toggle()`
-- [ ] Any element can be a trigger via a data attribute — e.g. `<a href="#" data-support-ai-open>Chat with us</a>` (delegated click handler)
-- [ ] Option to hide the default floating launcher when a custom trigger is used (`data-launcher="off"`)
-- [ ] Admin embed section documents BOTH shortcodes with copy-paste snippets
+- [x] Shortcode A: auto floating launcher — `<script src="…/widget.js" data-agent="…">`
+- [x] Shortcode B: clickable **link/button** opens chat inline (`<a data-support-ai-open>` or `onclick="supportAI.open()"`)
+- [x] Global API — `window.supportAI.open()` / `.close()` / `.toggle()`
+- [x] Any element is a trigger via `data-support-ai-open` (delegated click handler)
+- [x] Hide the floating launcher with `data-launcher="off"`
+- [x] Admin embed section documents BOTH options; demo page shows a live trigger
 
 ---
 
