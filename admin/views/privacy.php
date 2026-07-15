@@ -15,7 +15,7 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
   🔒 These settings support <strong>KSA PDPL</strong> compliance (consent, data minimisation, cross-border safeguards, data-subject rights). They enable compliance but are not legal advice — have your DPO review.
 </div>
 
-<form class="stack" method="post" action="/admin/privacy" style="max-width:none">
+<form class="stack" method="post" action="<?= u('/admin/privacy') ?>" style="max-width:none">
   <?= csrf_field() ?>
   <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
 
@@ -77,12 +77,12 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
   <h3>Data-subject rights (erase / export)</h3>
   <p style="color:var(--muted);font-size:13px;margin-top:0">Act on a visitor's request. The visitor id is shown on each conversation.</p>
   <div class="row" style="align-items:end">
-    <form method="get" action="/admin/privacy/export" style="display:flex;gap:8px;align-items:end">
+    <form method="get" action="<?= u('/admin/privacy/export') ?>" style="display:flex;gap:8px;align-items:end">
       <div class="field" style="margin:0;flex:1"><label>Export all data for visitor</label>
         <input type="text" name="visitor_id" placeholder="visitor id" required></div>
       <button class="btn ghost" type="submit">Export JSON</button>
     </form>
-    <form method="post" action="/admin/privacy/erase" style="display:flex;gap:8px;align-items:end"
+    <form method="post" action="<?= u('/admin/privacy/erase') ?>" style="display:flex;gap:8px;align-items:end"
           onsubmit="return confirm('Permanently erase ALL data for this visitor? This cannot be undone.')">
       <?= csrf_field() ?>
       <div class="field" style="margin:0;flex:1"><label>Erase all data for visitor</label>

@@ -2,7 +2,7 @@
 <div class="card" style="max-width:760px">
   <h3>Test chat</h3>
   <p style="color:var(--muted);font-size:13px;margin-top:0">Ask the live agent a question — same retrieval + evaluation as production, but nothing is saved.</p>
-  <form method="post" action="/admin/test">
+  <form method="post" action="<?= u('/admin/test') ?>">
     <?= csrf_field() ?>
     <div class="field">
       <textarea name="q" placeholder="e.g. What is your refund policy?" style="min-height:70px"><?= e($q) ?></textarea>

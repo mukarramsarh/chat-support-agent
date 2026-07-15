@@ -6,7 +6,7 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
 ?>
 <?php if (!empty($saved)): ?><div class="notice" style="margin-bottom:18px">✓ Settings saved.</div><?php endif; ?>
 
-<form class="stack" method="post" action="/admin/agent" style="max-width:none">
+<form class="stack" method="post" action="<?= u('/admin/agent') ?>" style="max-width:none">
   <?= csrf_field() ?>
   <div class="grid" style="grid-template-columns:1fr 1fr;align-items:start">
 
@@ -96,7 +96,7 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
       <div class="field" style="margin-top:14px"><label>Allowed embed domains</label>
         <textarea name="allowed_domains" placeholder="example.com&#10;support.example.com" style="min-height:70px"><?= e($allowed_domains ?? '') ?></textarea>
         <div class="hint">One host per line/comma. Restricts which sites may call the chat API (CORS). Leave blank to allow any (not recommended for production).</div></div>
-      <a class="btn ghost" href="/demo" target="_blank" style="margin-top:8px">Open live preview ↗</a>
+      <a class="btn ghost" href="<?= u('/demo') ?>" target="_blank" style="margin-top:8px">Open live preview ↗</a>
     </div>
   </div>
 
@@ -122,7 +122,7 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
     modelEl.innerHTML = '';
     modelEl.appendChild(opt('', 'Loading…', true));
 
-    fetch('/admin/api/models?provider=' + encodeURIComponent(provider), { headers: { 'Accept': 'application/json' } })
+    fetch('<?= u('/admin/api/models') ?>?provider=' + encodeURIComponent(provider), { headers: { 'Accept': 'application/json' } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var models = data.models || [];

@@ -24,6 +24,7 @@ final class Config
                 'env'      => Env::get('APP_ENV', 'production'),
                 'debug'    => self::toBool(Env::get('APP_DEBUG', 'false')),
                 'url'      => rtrim((string) Env::get('APP_URL', ''), '/'),
+                'base_path' => self::basePath(Env::get('APP_BASE_PATH', '')),
                 'key'      => (string) Env::get('APP_KEY', ''),
                 'timezone' => Env::get('APP_TIMEZONE', 'UTC'),
                 'ingest_async' => self::toBool(Env::get('INGEST_ASYNC', 'false')),
@@ -106,5 +107,12 @@ final class Config
     private static function toBool(?string $value): bool
     {
         return in_array(strtolower((string) $value), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /** Normalise a sub-directory base path: '' or '/chatbot' (leading slash, no trailing). */
+    public static function basePath(?string $value): string
+    {
+        $v = trim((string) $value, "/ \t");
+        return $v === '' ? '' : '/' . $v;
     }
 }

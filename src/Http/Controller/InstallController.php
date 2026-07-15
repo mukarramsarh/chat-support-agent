@@ -28,7 +28,7 @@ final class InstallController
     public function show(Request $request): void
     {
         if ($this->isInstalled()) {
-            Response::redirect('/admin');
+            Response::redirect(u('/admin'));
             return;
         }
         $this->render();
@@ -37,7 +37,7 @@ final class InstallController
     public function run(Request $request): void
     {
         if ($this->isInstalled()) {
-            Response::redirect('/admin');
+            Response::redirect(u('/admin'));
             return;
         }
 
@@ -85,7 +85,7 @@ final class InstallController
             return;
         }
 
-        Response::redirect('/admin');
+        Response::redirect(u('/admin'));
     }
 
     // ── helpers ─────────────────────────────────────────────────────────────
@@ -146,6 +146,7 @@ final class InstallController
         $lines = [
             'APP_ENV=production', 'APP_DEBUG=false',
             'APP_URL=' . ($in('app_url') ?: 'http://localhost'),
+            'APP_BASE_PATH=' . $in('base_path'),
             'APP_KEY=' . $key, 'APP_TIMEZONE=UTC',
             '', 'DB_HOST=' . $db['host'], 'DB_PORT=' . $db['port'], 'DB_NAME=' . $db['name'],
             'DB_USER=' . $db['user'], 'DB_PASS=' . $db['pass'], 'DB_CHARSET=utf8mb4',

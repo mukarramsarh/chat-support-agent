@@ -228,6 +228,6 @@ final class DocumentController
     private function finish(string $type, string $message): void
     {
         $_SESSION['flash'] = ['type' => $type, 'message' => $message];
-        Response::redirect('/admin/knowledge');
+        Response::redirect(u('/admin/knowledge'));
     }
 }

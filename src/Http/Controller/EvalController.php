@@ -89,13 +89,13 @@ final class EvalController
         if ($name !== '') {
             $id = $this->evals->createSet($agentId, $name);
         }
-        Response::redirect('/admin/evals' . ($id ? '?set=' . $id : ''));
+        Response::redirect(u('/admin/evals' . ($id ? '?set=' . $id : '')));
     }
 
     public function deleteSet(Request $request): void
     {
         $this->evals->deleteSet((int) $request->input('id', 0));
-        Response::redirect('/admin/evals');
+        Response::redirect(u('/admin/evals'));
     }
 
     public function addCase(Request $request): void
@@ -107,14 +107,14 @@ final class EvalController
         if ($setId && $question !== '') {
             $this->evals->addCase($setId, $question, $expected, $must);
         }
-        Response::redirect('/admin/evals?set=' . $setId);
+        Response::redirect(u('/admin/evals?set=' . $setId));
     }
 
     public function deleteCase(Request $request): void
     {
         $setId = (int) $request->input('set_id', 0);
         $this->evals->deleteCase((int) $request->input('id', 0));
-        Response::redirect('/admin/evals?set=' . $setId);
+        Response::redirect(u('/admin/evals?set=' . $setId));
     }
 
     public function run(Request $request): void
@@ -129,6 +129,6 @@ final class EvalController
         } catch (Throwable $e) {
             $_SESSION['flash'] = ['type' => 'error', 'message' => 'Run failed: ' . $e->getMessage()];
         }
-        Response::redirect('/admin/evals?set=' . $setId);
+        Response::redirect(u('/admin/evals?set=' . $setId));
     }
 }

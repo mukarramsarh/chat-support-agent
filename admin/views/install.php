@@ -41,9 +41,9 @@ $v = fn ($k, $d = '') => e((string) ($values[$k] ?? $d));
   <?php if (!empty($manualEnv)): ?>
     <div class="card">
       <h3>Almost done — save your config</h3>
-      <p class="muted">The database is set up, but we couldn't write <code>.env</code> automatically. Create a file named <code>.env</code> in the project root with the contents below, then visit <a href="/admin">/admin</a>.</p>
+      <p class="muted">The database is set up, but we couldn't write <code>.env</code> automatically. Create a file named <code>.env</code> in the project root with the contents below, then visit <a href="<?= u('/admin') ?>">/admin</a>.</p>
       <pre><?= e($manualEnv) ?></pre>
-      <a class="btn" href="/admin" style="display:block;text-align:center;text-decoration:none">I've saved it → Continue</a>
+      <a class="btn" href="<?= u('/admin') ?>" style="display:block;text-align:center;text-decoration:none">I've saved it → Continue</a>
     </div>
   <?php else: ?>
 
@@ -57,7 +57,7 @@ $v = fn ($k, $d = '') => e((string) ($values[$k] ?? $d));
     <?php endforeach; ?>
   </div>
 
-  <form method="post" action="/install">
+  <form method="post" action="<?= u('/install') ?>">
     <div class="card">
       <h3>Database</h3>
       <div class="row">
@@ -73,7 +73,9 @@ $v = fn ($k, $d = '') => e((string) ($values[$k] ?? $d));
 
     <div class="card">
       <h3>Site &amp; AI keys</h3>
-      <label>Public URL</label><input name="app_url" value="<?= $v('app_url') ?>" placeholder="https://support.example.com">
+      <label>Public URL</label><input name="app_url" value="<?= $v('app_url') ?>" placeholder="https://staging-dev.procurementhub.sa/chatbot">
+      <label>Sub-directory path (optional)</label><input name="base_path" value="<?= $v('base_path') ?>" placeholder="/chatbot — leave blank if at a domain/subdomain root">
+      <div class="muted">Set this ONLY if the app is served from a sub-folder (e.g. /chatbot). Leave blank if it's at the root of a domain or subdomain.</div>
       <div class="row">
         <div><label>Chat provider</label>
           <select name="chat_provider"><option value="gemini">Gemini</option><option value="openai">OpenAI</option><option value="anthropic">Anthropic</option></select></div>

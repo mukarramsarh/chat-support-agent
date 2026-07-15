@@ -30,7 +30,7 @@ foreach ($daily as $d) { $max = max($max, (float) $d['cost']); }
     <div class="value"><?= number_format($stats['conversations']) ?></div>
     <div class="sub"><?= number_format($stats['messages']) ?> <?= e(t('assistant replies')) ?></div>
   </div>
-  <a class="card stat" href="/admin/conversations?status=needs_attention" style="text-decoration:none;color:inherit">
+  <a class="card stat" href="<?= u('/admin/conversations?status=needs_attention') ?>" style="text-decoration:none;color:inherit">
     <div class="label">⚠️ <?= e(t('Needs attention')) ?></div>
     <div class="value" style="<?= $stats['needs_attention'] > 0 ? 'color:#d97706' : '' ?>"><?= number_format($stats['needs_attention']) ?></div>
     <div class="sub"><?= e(t('sessions flagged for review')) ?></div>
@@ -79,6 +79,6 @@ foreach ($daily as $d) { $max = max($max, (float) $d['cost']); }
     <p style="color:var(--muted);font-size:13px;margin-top:0">Paste this before <code>&lt;/body&gt;</code> on any site:</p>
     <pre style="background:#0b1020;color:#e2e8f0;border-radius:10px;padding:14px;font-size:12px;overflow:auto;white-space:pre-wrap;word-break:break-all"><code>&lt;script src="<?= $appUrl ?>/widget.js"
   data-agent="<?= $publicId ?>" defer&gt;&lt;/script&gt;</code></pre>
-    <a class="btn ghost" href="/admin/agent" style="margin-top:6px">Customize appearance →</a>
+    <a class="btn ghost" href="<?= u('/admin/agent') ?>" style="margin-top:6px">Customize appearance →</a>
   </div>
 </div>

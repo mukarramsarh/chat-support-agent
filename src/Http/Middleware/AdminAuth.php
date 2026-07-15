@@ -19,7 +19,7 @@ final class AdminAuth
             session_start();
         }
         if (empty($_SESSION['admin_id'])) {
-            Response::redirect('/admin/login');
+            Response::redirect(u('/admin/login'));
             return false;
         }
         return true;

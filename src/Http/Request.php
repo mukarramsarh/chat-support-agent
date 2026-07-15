@@ -32,6 +32,12 @@ final class Request
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = rtrim(parse_url($uri, PHP_URL_PATH) ?: '/', '/') ?: '/';
 
+        // Strip the sub-directory base path (APP_BASE_PATH) so routes match at root.
+        $base = \SupportAI\Support\Config::basePath(\SupportAI\Support\Env::get('APP_BASE_PATH', ''));
+        if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
+            $path = substr($path, strlen($base)) ?: '/';
+        }
+
         $raw = file_get_contents('php://input') ?: '';
         $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
         $body = $_POST;

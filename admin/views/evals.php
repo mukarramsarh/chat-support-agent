@@ -15,13 +15,13 @@ $pct = fn ($v) => $v === null ? '—' : number_format((float) $v * 100, 0) . '%'
     <?php if (empty($sets)): ?><p style="color:var(--muted);font-size:13px">No sets yet.</p><?php endif; ?>
     <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">
       <?php foreach ($sets as $s): ?>
-        <a href="/admin/evals?set=<?= (int) $s['id'] ?>"
+        <a href="<?= u('/admin/evals?set=' . (int) $s['id']) ?>"
            style="padding:9px 12px;border-radius:9px;text-decoration:none;font-size:14px;<?= ($selected && $selected['id'] == $s['id']) ? 'background:linear-gradient(135deg,var(--primary),var(--accent));color:#fff' : 'color:var(--ink);background:#f8fafc' ?>">
           <?= e($s['name']) ?> <span style="opacity:.7;font-size:12px">(<?= (int) $s['case_count'] ?>)</span>
         </a>
       <?php endforeach; ?>
     </div>
-    <form method="post" action="/admin/evals/set">
+    <form method="post" action="<?= u('/admin/evals/set') ?>">
       <?= csrf_field() ?>
       <input type="text" name="name" placeholder="New set name" required style="margin-bottom:8px">
       <button class="btn" style="width:100%">Create set</button>
@@ -37,8 +37,8 @@ $pct = fn ($v) => $v === null ? '—' : number_format((float) $v * 100, 0) . '%'
         <div style="display:flex;justify-content:space-between;align-items:center">
           <h3 style="margin:0"><?= e($selected['name']) ?></h3>
           <div style="display:flex;gap:8px">
-            <form method="post" action="/admin/evals/run"><?= csrf_field() ?><input type="hidden" name="set_id" value="<?= (int) $selected['id'] ?>"><button class="btn" <?= empty($cases) ? 'disabled' : '' ?>>▶ Run</button></form>
-            <form method="post" action="/admin/evals/set/delete" onsubmit="return confirm('Delete this set?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $selected['id'] ?>"><button class="btn ghost">Delete</button></form>
+            <form method="post" action="<?= u('/admin/evals/run') ?>"><?= csrf_field() ?><input type="hidden" name="set_id" value="<?= (int) $selected['id'] ?>"><button class="btn" <?= empty($cases) ? 'disabled' : '' ?>>▶ Run</button></form>
+            <form method="post" action="<?= u('/admin/evals/set/delete') ?>" onsubmit="return confirm('Delete this set?')"><?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $selected['id'] ?>"><button class="btn ghost">Delete</button></form>
           </div>
         </div>
         <?php if ($latest): ?>
@@ -54,7 +54,7 @@ $pct = fn ($v) => $v === null ? '—' : number_format((float) $v * 100, 0) . '%'
       <!-- Add case -->
       <div class="card" style="margin-bottom:18px">
         <h3>Add a test case</h3>
-        <form method="post" action="/admin/evals/case">
+        <form method="post" action="<?= u('/admin/evals/case') ?>">
           <?= csrf_field() ?><input type="hidden" name="set_id" value="<?= (int) $selected['id'] ?>">
           <div class="field"><label>Question</label><input type="text" name="question" required placeholder="How long is the refund window?"></div>
           <div class="row" style="margin-top:12px">
@@ -87,7 +87,7 @@ $pct = fn ($v) => $v === null ? '—' : number_format((float) $v * 100, 0) . '%'
                   <td><?= $res ? ((int) $res['grounded'] ? '✓' : '·') : '' ?></td>
                   <td style="color:var(--muted);font-size:12px"><?= $res ? e((string) $res['notes']) : '' ?></td>
                   <td style="text-align:right">
-                    <form method="post" action="/admin/evals/case/delete"><?= csrf_field() ?><input type="hidden" name="set_id" value="<?= (int) $selected['id'] ?>"><input type="hidden" name="id" value="<?= (int) $cse['id'] ?>"><button class="btn ghost" style="padding:5px 10px;font-size:12px">✕</button></form>
+                    <form method="post" action="<?= u('/admin/evals/case/delete') ?>"><?= csrf_field() ?><input type="hidden" name="set_id" value="<?= (int) $selected['id'] ?>"><input type="hidden" name="id" value="<?= (int) $cse['id'] ?>"><button class="btn ghost" style="padding:5px 10px;font-size:12px">✕</button></form>
                   </td>
                 </tr>
               <?php endforeach; ?>

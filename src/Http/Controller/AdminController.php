@@ -56,7 +56,7 @@ final class AdminController
     public function loginForm(Request $request): void
     {
         if (!empty($_SESSION['admin_id'])) {
-            Response::redirect('/admin');
+            Response::redirect(u('/admin'));
             return;
         }
         Response::html($this->view->render('login', [
@@ -86,7 +86,7 @@ final class AdminController
             }
             $id = $this->admins->create($email, 'Owner', password_hash($password, PASSWORD_DEFAULT), 'owner');
             $_SESSION['admin_id'] = $id;
-            Response::redirect('/admin');
+            Response::redirect(u('/admin'));
             return;
         }
 
@@ -99,14 +99,14 @@ final class AdminController
         $this->rateLimiter->clear($lockKey, 900);
         $_SESSION['admin_id'] = (int) $user['id'];
         $this->admins->touchLogin((int) $user['id']);
-        Response::redirect('/admin');
+        Response::redirect(u('/admin'));
     }
 
     public function logout(Request $request): void
     {
         $_SESSION = [];
         session_destroy();
-        Response::redirect('/admin/login');
+        Response::redirect(u('/admin/login'));
     }
 
     /** Switch admin language (en|ar) and return to the previous page. */
@@ -115,7 +115,7 @@ final class AdminController
         Lang::setLocale((string) $request->input('lang', 'en'));
         $ref = (string) $request->header('referer', '');
         // Only follow same-app admin paths to avoid open-redirects.
-        $back = (str_contains($ref, '/admin') ? parse_url($ref, PHP_URL_PATH) : null) ?: '/admin';
+        $back = (str_contains($ref, '/admin') ? parse_url($ref, PHP_URL_PATH) : null) ?: u('/admin');
         Response::redirect($back);
     }
 
@@ -180,7 +180,7 @@ final class AdminController
             'theme'             => $theme,
         ]);
         $this->settings->set('allowed_domains', trim((string) $request->input('allowed_domains', '')));
-        Response::redirect('/admin/agent?saved=1');
+        Response::redirect(u('/admin/agent?saved=1'));
     }
 
     /** JSON: live chat models for the chosen provider (drives the model dropdown). */
@@ -243,7 +243,7 @@ final class AdminController
         $id = (int) ($params['id'] ?? 0);
         $conversation = $this->conversations->findById($id);
         if ($conversation === null) {
-            Response::redirect('/admin/conversations');
+            Response::redirect(u('/admin/conversations'));
             return;
         }
         $this->page('conversation_detail', 'Session', [
@@ -257,7 +257,7 @@ final class AdminController
     {
         $id = (int) ($params['id'] ?? 0);
         $this->conversations->setStatus($id, (string) $request->input('status', ''));
-        Response::redirect('/admin/conversations/' . $id);
+        Response::redirect(u('/admin/conversations/' . $id));
     }
 
     /** Download one session's transcript + metadata as JSON. */
@@ -266,7 +266,7 @@ final class AdminController
         $id = (int) ($params['id'] ?? 0);
         $conversation = $this->conversations->findById($id);
         if ($conversation === null) {
-            Response::redirect('/admin/conversations');
+            Response::redirect(u('/admin/conversations'));
             return;
         }
         $data = [
@@ -336,7 +336,7 @@ final class AdminController
             'privacy_url'    => (string) $request->input('privacy_url', ''),
         ]);
         $_SESSION['flash'] = ['type' => 'ok', 'message' => 'Privacy settings saved.'];
-        Response::redirect('/admin/privacy');
+        Response::redirect(u('/admin/privacy'));
     }
 
     public function eraseVisitor(Request $request): void
@@ -346,14 +346,14 @@ final class AdminController
             $counts = $this->compliance->erase($vid, (int) ($_SESSION['admin_id'] ?? 0), $request->ip());
             $_SESSION['flash'] = ['type' => 'ok', 'message' => "Erased data for {$vid}: " . json_encode($counts)];
         }
-        Response::redirect('/admin/privacy');
+        Response::redirect(u('/admin/privacy'));
     }
 
     public function exportVisitor(Request $request): void
     {
         $vid = trim((string) $request->input('visitor_id', ''));
         if ($vid === '') {
-            Response::redirect('/admin/privacy');
+            Response::redirect(u('/admin/privacy'));
             return;
         }
         $data = $this->compliance->export($vid, (int) ($_SESSION['admin_id'] ?? 0), $request->ip());

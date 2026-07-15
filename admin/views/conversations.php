@@ -12,9 +12,9 @@ $total = array_sum($counts);
 ?>
 
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px">
-  <a href="/admin/conversations" class="pill <?= $filter === '' ? 'info' : 'mut' ?>" style="text-decoration:none;padding:6px 12px">All (<?= (int) $total ?>)</a>
+  <a href="<?= u('/admin/conversations') ?>" class="pill <?= $filter === '' ? 'info' : 'mut' ?>" style="text-decoration:none;padding:6px 12px">All (<?= (int) $total ?>)</a>
   <?php foreach ($statusMeta as $key => [$label, $cls]): if (empty($counts[$key])) continue; ?>
-    <a href="/admin/conversations?status=<?= $key ?>" class="pill <?= $filter === $key ? $cls : 'mut' ?>"
+    <a href="<?= u('/admin/conversations?status=' . $key) ?>" class="pill <?= $filter === $key ? $cls : 'mut' ?>"
        style="text-decoration:none;padding:6px 12px"><?= e($label) ?> (<?= (int) $counts[$key] ?>)</a>
   <?php endforeach; ?>
 </div>
@@ -30,7 +30,7 @@ $total = array_sum($counts);
         <?php foreach ($conversations as $c):
           [$label, $cls] = $statusMeta[$c['status']] ?? [$c['status'], 'mut'];
         ?>
-          <tr onclick="location.href='/admin/conversations/<?= (int) $c['id'] ?>'" style="cursor:pointer">
+          <tr onclick="location.href='<?= u('/admin/conversations/' . (int) $c['id']) ?>'" style="cursor:pointer">
             <td><code><?= e(substr((string) $c['visitor_id'], 0, 12)) ?></code></td>
             <td style="max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               <?= e(mb_substr((string) ($c['first_message'] ?? ''), 0, 80)) ?: '<span style="color:#94a3b8">—</span>' ?></td>

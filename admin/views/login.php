@@ -27,7 +27,7 @@ use SupportAI\Support\Lang; ?>
 </style>
 </head>
 <body>
-  <form class="box" method="post" action="/admin/login">
+  <form class="box" method="post" action="<?= u('/admin/login') ?>">
     <?= csrf_field() ?>
     <div class="logo">◆</div>
     <h1><?= e($firstRun ? t('Create your account') : t('Welcome back')) ?></h1>

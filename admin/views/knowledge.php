@@ -23,7 +23,7 @@
   </div>
 
   <!-- Paste text -->
-  <form class="tab-pane" data-pane="text" method="post" action="/admin/knowledge/text">
+  <form class="tab-pane" data-pane="text" method="post" action="<?= u('/admin/knowledge/text') ?>">
     <?= csrf_field() ?>
     <div class="field"><label>Title (optional)</label>
       <input type="text" name="title" placeholder="e.g. Refund policy"></div>
@@ -33,7 +33,7 @@
   </form>
 
   <!-- Add URL -->
-  <form class="tab-pane" data-pane="url" method="post" action="/admin/knowledge/url" style="display:none">
+  <form class="tab-pane" data-pane="url" method="post" action="<?= u('/admin/knowledge/url') ?>" style="display:none">
     <?= csrf_field() ?>
     <div class="field"><label>Page URL(s)</label>
       <textarea name="url" required placeholder="https://example.com/help/article&#10;https://gov.example.sa/regulations" style="min-height:90px"></textarea>
@@ -51,7 +51,7 @@
   </form>
 
   <!-- Upload file -->
-  <form class="tab-pane" data-pane="file" method="post" action="/admin/knowledge/upload" enctype="multipart/form-data" style="display:none">
+  <form class="tab-pane" data-pane="file" method="post" action="<?= u('/admin/knowledge/upload') ?>" enctype="multipart/form-data" style="display:none">
     <?= csrf_field() ?>
     <div class="field"><label>PDF or DOCX (max 10 MB)</label>
       <input type="file" name="file" accept=".pdf,.docx" required>
@@ -99,12 +99,12 @@
             <td><span class="pill <?= $cls ?>"><?= e($status) ?></span></td>
             <td style="text-align:right;white-space:nowrap">
               <?php if ($isUrl): ?>
-                <form method="post" action="/admin/knowledge/refresh" style="display:inline">
+                <form method="post" action="<?= u('/admin/knowledge/refresh') ?>" style="display:inline">
                   <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
                   <button class="btn ghost" style="padding:6px 12px;font-size:13px" title="Re-fetch now">↻ Refresh</button>
                 </form>
               <?php endif; ?>
-              <form method="post" action="/admin/knowledge/delete" style="display:inline" onsubmit="return confirm('Remove this source?')">
+              <form method="post" action="<?= u('/admin/knowledge/delete') ?>" style="display:inline" onsubmit="return confirm('Remove this source?')">
                 <?= csrf_field() ?><input type="hidden" name="id" value="<?= (int) $d['id'] ?>">
                 <button class="btn ghost" style="padding:6px 12px;font-size:13px">Delete</button>
               </form>

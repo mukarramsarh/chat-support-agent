@@ -94,24 +94,24 @@ use SupportAI\Support\Lang; ?>
         ];
         foreach ($nav as $key => [$href, $icon, $label]):
       ?>
-        <a href="<?= $href ?>" class="<?= ($active ?? '') === $key ? 'on' : '' ?>">
+        <a href="<?= u($href) ?>" class="<?= ($active ?? '') === $key ? 'on' : '' ?>">
           <span class="ic"><?= $icon ?></span> <?= e(t($label)) ?>
         </a>
       <?php endforeach; ?>
     </nav>
     <div class="foot">
       <div style="margin-bottom:8px">
-        <a href="/admin/locale?lang=en" style="<?= Lang::locale() === 'en' ? 'color:#fff;font-weight:600' : '' ?>">EN</a>
-        · <a href="/admin/locale?lang=ar" style="<?= Lang::locale() === 'ar' ? 'color:#fff;font-weight:600' : '' ?>">العربية</a>
+        <a href="<?= u('/admin/locale?lang=en') ?>" style="<?= Lang::locale() === 'en' ? 'color:#fff;font-weight:600' : '' ?>">EN</a>
+        · <a href="<?= u('/admin/locale?lang=ar') ?>" style="<?= Lang::locale() === 'ar' ? 'color:#fff;font-weight:600' : '' ?>">العربية</a>
       </div>
-      v0.1 · <a href="/admin/logout"><?= e(t('Sign out')) ?></a>
+      v0.1 · <a href="<?= u('/admin/logout') ?>"><?= e(t('Sign out')) ?></a>
     </div>
   </aside>
 
   <main class="main">
     <div class="topbar">
       <h1><?= e(t($title ?? '')) ?></h1>
-      <a class="btn ghost" href="/demo" target="_blank"><?= e(t('Preview widget ↗')) ?></a>
+      <a class="btn ghost" href="<?= u('/demo') ?>" target="_blank"><?= e(t('Preview widget ↗')) ?></a>
     </div>
     <div class="content"><?= $content ?></div>
   </main>

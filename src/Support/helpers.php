@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use SupportAI\Support\Config;
 use SupportAI\Support\Csrf;
 use SupportAI\Support\Env;
 use SupportAI\Support\Lang;
@@ -27,6 +28,21 @@ if (!function_exists('e')) {
     function e(?string $value): string
     {
         return htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+    }
+}
+
+if (!function_exists('u')) {
+    /**
+     * Build an app URL that respects APP_BASE_PATH (sub-directory deploys).
+     * u('/admin') → '/admin' at root, or '/chatbot/admin' under a base path.
+     */
+    function u(string $path = ''): string
+    {
+        $base = Config::basePath(Env::get('APP_BASE_PATH', ''));
+        if ($path === '' || $path === '/') {
+            return $base === '' ? '/' : $base;
+        }
+        return $base . '/' . ltrim($path, '/');
     }
 }
 

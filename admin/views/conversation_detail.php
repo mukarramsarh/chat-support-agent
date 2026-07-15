@@ -13,8 +13,8 @@ $curStatus = $conversation['status'];
 $fmtLabel = fn ($s) => ucfirst(str_replace('_', ' ', $s));
 ?>
 <div style="display:flex;justify-content:space-between;align-items:center">
-  <a href="/admin/conversations" style="color:var(--muted);font-size:13px">← All conversations</a>
-  <a class="btn ghost" href="/admin/conversations/<?= (int) $conversation['id'] ?>/export" style="padding:6px 12px;font-size:13px">⬇ Export JSON</a>
+  <a href="<?= u('/admin/conversations') ?>" style="color:var(--muted);font-size:13px">← All conversations</a>
+  <a class="btn ghost" href="<?= u('/admin/conversations/' . (int) $conversation['id'] . '/export') ?>" style="padding:6px 12px;font-size:13px">⬇ Export JSON</a>
 </div>
 
 <div class="card" style="margin:12px 0 18px">
@@ -26,7 +26,7 @@ $fmtLabel = fn ($s) => ucfirst(str_replace('_', ' ', $s));
     <div><div style="font-size:13px;color:var(--muted)">Messages</div><div style="font-weight:600"><?= (int) $conversation['message_count'] ?></div></div>
     <div><div style="font-size:13px;color:var(--muted)">Total cost</div><div style="font-weight:600">$<?= number_format((float) $conversation['total_cost_usd'], 5) ?></div></div>
     <div><div style="font-size:13px;color:var(--muted)">Started</div><div style="font-weight:600"><?= e(substr((string) $conversation['created_at'], 0, 16)) ?></div></div>
-    <form method="post" action="/admin/conversations/<?= (int) $conversation['id'] ?>/status" style="display:flex;gap:8px;align-items:center">
+    <form method="post" action="<?= u('/admin/conversations/' . (int) $conversation['id'] . '/status') ?>" style="display:flex;gap:8px;align-items:center">
       <?= csrf_field() ?>
       <span class="pill <?= $cls ?>"><?= e($label) ?></span>
       <select name="status" onchange="this.form.submit()" style="width:auto">
