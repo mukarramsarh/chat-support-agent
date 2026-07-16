@@ -37,40 +37,59 @@ final class WidgetController
         $form = $this->settings->startupForm();
         $compliance = $this->settings->compliance();
 
-        // Public form config: expose only enabled fields + consent copy.
+        // Public form config: expose only enabled fields + consent copy. Both
+        // languages ship in one payload so the widget can pick per visitor
+        // without a second round-trip (and the response stays cacheable).
         $publicForm = null;
         if (!empty($form['enabled'])) {
             $publicForm = [
                 'title'            => $form['title'] ?? 'Before we start',
+                'title_ar'         => $form['title_ar'] ?? '',
                 'subtitle'         => $form['subtitle'] ?? '',
+                'subtitle_ar'      => $form['subtitle_ar'] ?? '',
                 'consent_required' => (bool) ($form['consent_required'] ?? true),
                 'consent_text'     => $form['consent_text'] ?? '',
+                'consent_text_ar'  => $form['consent_text_ar'] ?? '',
                 'privacy_url'      => $compliance['privacy_url'] ?? '',
                 'fields'           => array_values(array_filter(
                     array_map(static fn ($f) => empty($f['enabled']) ? null : [
-                        'key' => $f['key'], 'label' => $f['label'], 'required' => (bool) ($f['required'] ?? false),
+                        'key'      => $f['key'],
+                        'label'    => $f['label'],
+                        'label_ar' => $f['label_ar'] ?? '',
+                        'required' => (bool) ($f['required'] ?? false),
                     ], $form['fields'] ?? []),
                 )),
             ];
         }
 
+        $rtl = (bool) ($compliance['rtl'] ?? false);
+
         Response::json([
             'agent' => [
-                'public_id'       => $agent['public_id'],
-                'name'            => $agent['name'],
-                'welcome_message' => $agent['welcome_message'],
-                'theme'           => [
-                    'primary'   => $theme['primary'] ?? '#4f46e5',
-                    'accent'    => $theme['accent'] ?? '#7c3aed',
-                    'position'  => $theme['position'] ?? 'right',
-                    'avatar'    => $theme['avatar'] ?? null,
-                    'launcher'  => $theme['launcher'] ?? '💬',
-                    'title'     => $theme['title'] ?? $agent['name'],
-                    'subtitle'  => $theme['subtitle'] ?? 'Typically replies instantly',
+                'public_id'          => $agent['public_id'],
+                'name'               => $agent['name'],
+                'welcome_message'    => $agent['welcome_message'],
+                // Arabic twins of the agent's copy. They live in the theme JSON
+                // because agents has no Arabic columns and shared hosting has no
+                // CLI to run a migration — see the note in AdminController.
+                'name_ar'            => $theme['name_ar'] ?? '',
+                'welcome_message_ar' => $theme['welcome_ar'] ?? '',
+                'theme'              => [
+                    'primary'     => $theme['primary'] ?? '#4f46e5',
+                    'accent'      => $theme['accent'] ?? '#7c3aed',
+                    'position'    => $theme['position'] ?? 'right',
+                    'avatar'      => $theme['avatar'] ?? null,
+                    'launcher'    => $theme['launcher'] ?? '💬',
+                    'title'       => $theme['title'] ?? $agent['name'],
+                    'title_ar'    => $theme['title_ar'] ?? ($theme['name_ar'] ?? ''),
+                    'subtitle'    => $theme['subtitle'] ?? 'Typically replies instantly',
+                    'subtitle_ar' => $theme['subtitle_ar'] ?? 'يرد عادةً خلال لحظات',
                 ],
             ],
             'startup_form' => $publicForm,
-            'rtl'          => (bool) ($compliance['rtl'] ?? false),
+            'rtl'          => $rtl,
+            // Used only when the host page and browser give no language signal.
+            'default_lang' => $rtl ? 'ar' : 'en',
             'api_base'     => $this->config->string('app.url'),
         ], 200, ['Access-Control-Allow-Origin' => '*']);
     }

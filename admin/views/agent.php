@@ -15,11 +15,16 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
       <h3>Persona &amp; behaviour</h3>
       <div class="field"><label>Assistant name</label>
         <input type="text" name="name" value="<?= $val('name') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>اسم المساعد (Arabic name)</label>
+        <input type="text" name="theme_name_ar" dir="rtl" value="<?= $tval('name_ar') ?>">
+        <div class="hint">Shown to Arabic visitors. Blank = the English name is used for everyone.</div></div>
       <div class="field" style="margin-top:14px"><label>Persona / system prompt</label>
         <textarea name="persona" placeholder="You are a helpful support assistant for…"><?= $val('persona') ?></textarea>
         <div class="hint">Sets tone and boundaries. Kept stable so it can be prompt-cached.</div></div>
       <div class="field" style="margin-top:14px"><label>Welcome message</label>
         <input type="text" name="welcome_message" value="<?= $val('welcome_message') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>رسالة الترحيب (Arabic welcome)</label>
+        <input type="text" name="theme_welcome_ar" dir="rtl" value="<?= $tval('welcome_ar') ?>"></div>
       <div class="field" style="margin-top:14px"><label>Fallback (when unsure / over budget)</label>
         <input type="text" name="fallback_message" value="<?= $val('fallback_message') ?>"></div>
     </div>
@@ -79,6 +84,8 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
       </div>
       <div class="field" style="margin-top:14px"><label>Header subtitle</label>
         <input type="text" name="theme_subtitle" value="<?= $tval('subtitle', 'Typically replies instantly') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>العنوان الفرعي (Arabic subtitle)</label>
+        <input type="text" name="theme_subtitle_ar" dir="rtl" value="<?= $tval('subtitle_ar', 'يرد عادةً خلال لحظات') ?>"></div>
     </div>
 
     <!-- ── Embed ── -->

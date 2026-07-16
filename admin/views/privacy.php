@@ -25,16 +25,22 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
       <label style="display:flex;align-items:center;gap:8px;font-weight:600">
         <input type="checkbox" name="form_enabled" value="1" <?= !empty($form['enabled']) ? 'checked' : '' ?>> Enable the form before chat starts
       </label>
+      <div class="hint" style="margin-top:10px">Each string has an Arabic twin. The widget shows Arabic to Arabic visitors and English to everyone else — leave one blank and the other is used for both.</div>
       <div class="field" style="margin-top:14px"><label>Title</label>
         <input type="text" name="form_title" value="<?= e($form['title'] ?? '') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>العنوان (Arabic title)</label>
+        <input type="text" name="form_title_ar" dir="rtl" value="<?= e($form['title_ar'] ?? '') ?>"></div>
       <div class="field" style="margin-top:12px"><label>Subtitle</label>
         <input type="text" name="form_subtitle" value="<?= e($form['subtitle'] ?? '') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>العنوان الفرعي (Arabic subtitle)</label>
+        <input type="text" name="form_subtitle_ar" dir="rtl" value="<?= e($form['subtitle_ar'] ?? '') ?>"></div>
 
       <div style="margin-top:16px">
-        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:8px">Fields</div>
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;margin-bottom:8px">Fields · label / التسمية</div>
         <?php foreach (['name' => 'Name', 'email' => 'Email', 'phone' => 'Phone', 'company' => 'Company'] as $k => $lbl): ?>
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <input type="text" name="label_<?= $k ?>" value="<?= e($fld($k, 'label', $lbl)) ?>" style="flex:1">
+            <input type="text" name="label_<?= $k ?>_ar" dir="rtl" placeholder="بالعربية" value="<?= e($fld($k, 'label_ar')) ?>" style="flex:1">
             <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="checkbox" name="enabled_<?= $k ?>" value="1" <?= !empty($fld($k, 'enabled')) ? 'checked' : '' ?>> on</label>
             <label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="checkbox" name="required_<?= $k ?>" value="1" <?= !empty($fld($k, 'required')) ? 'checked' : '' ?>> req</label>
           </div>
@@ -50,6 +56,8 @@ $comp = fn ($k, $def = '') => $compliance[$k] ?? $def;
       </label>
       <div class="field" style="margin-top:12px"><label>Consent text</label>
         <textarea name="consent_text" style="min-height:80px"><?= e($form['consent_text'] ?? '') ?></textarea></div>
+      <div class="field" style="margin-top:8px"><label>نص الموافقة (Arabic consent text)</label>
+        <textarea name="consent_text_ar" dir="rtl" style="min-height:80px"><?= e($form['consent_text_ar'] ?? '') ?></textarea></div>
       <div class="field" style="margin-top:12px"><label>Privacy policy URL</label>
         <input type="text" name="privacy_url" value="<?= e($comp('privacy_url')) ?>" placeholder="https://…"></div>
 

@@ -46,12 +46,21 @@ final class DemoSeeder
             $this->clearKnowledge($agentId);
         }
 
+        // Copy is seeded as EN/AR pairs rather than one bilingual string, so an
+        // Arabic visitor sees only Arabic and an English visitor only English.
         $this->agents->update($agentId, [
             'name'             => 'ProcurementHub Assistant',
             'persona'          => $this->persona(),
-            'welcome_message'  => '👋 Welcome to Procurement Hub! Ask me about our services, products, or Saudi procurement & local-content rules. — مرحباً بك في بروكيورمنت هب! اسألني عن خدماتنا ومنتجاتنا أو أنظمة المشتريات والمحتوى المحلي في السعودية.',
+            'welcome_message'  => '👋 Welcome to Procurement Hub! Ask me about our services, products, or Saudi procurement & local-content rules.',
             'fallback_message' => "I don't have that detail — shall I connect you with our team? / لا تتوفر لديّ هذه المعلومة — هل ترغب في توصيلك بفريقنا؟",
+            'theme'            => array_merge($agent['theme'] ?: [], [
+                'name_ar'     => 'مساعد بروكيورمنت هب',
+                'welcome_ar'  => '👋 مرحباً بك في بروكيورمنت هب! اسألني عن خدماتنا ومنتجاتنا أو أنظمة المشتريات والمحتوى المحلي في السعودية.',
+                'subtitle'    => 'Typically replies instantly',
+                'subtitle_ar' => 'يرد عادةً خلال لحظات',
+            ]),
         ]);
+        $this->seedStartupFormCopy();
 
         $docs = 0;
         foreach ($this->knowledge() as [$title, $content]) {
@@ -66,6 +75,50 @@ final class DemoSeeder
         $setId = $this->seedEvalSet($agentId);
 
         return ['docs' => $docs, 'eval_set' => $setId];
+    }
+
+    /**
+     * Give the startup form ProcurementHub copy in both languages, while leaving
+     * the admin's own switches (form on/off, which fields, which are required)
+     * exactly as configured — re-seeding content must not undo those choices.
+     */
+    private function seedStartupFormCopy(): void
+    {
+        $form = $this->settings->startupForm();
+
+        $arLabels = [
+            'name'    => 'الاسم الكامل',
+            'email'   => 'البريد الإلكتروني للعمل',
+            'phone'   => 'رقم الجوال',
+            'company' => 'جهة العمل',
+        ];
+        $enLabels = [
+            'name'    => 'Full name',
+            'email'   => 'Work email',
+            'phone'   => 'Phone',
+            'company' => 'Company',
+        ];
+        $fields = [];
+        foreach ($form['fields'] ?? [] as $f) {
+            $key = (string) $f['key'];
+            $fields[] = [
+                'key'      => $key,
+                'label'    => $enLabels[$key] ?? $f['label'],
+                'label_ar' => $arLabels[$key] ?? ($f['label_ar'] ?? ''),
+                'enabled'  => (bool) ($f['enabled'] ?? false),
+                'required' => (bool) ($f['required'] ?? false),
+            ];
+        }
+
+        $this->settings->setJson('startup_form', array_merge($form, [
+            'title'           => 'Before we start',
+            'title_ar'        => 'قبل أن نبدأ',
+            'subtitle'        => 'A few details so our team can help you faster.',
+            'subtitle_ar'     => 'بعض التفاصيل حتى يتمكن فريقنا من مساعدتك بشكل أسرع.',
+            'fields'          => $fields,
+            'consent_text'    => 'I agree to the processing of my personal data to receive support, in line with the privacy policy.',
+            'consent_text_ar' => 'أوافق على معالجة بياناتي الشخصية لتلقي الدعم، وفقاً لسياسة الخصوصية.',
+        ]));
     }
 
     private function clearKnowledge(int $agentId): void

@@ -161,12 +161,18 @@ final class AdminController
     public function saveAgent(Request $request): void
     {
         $agent = $this->agents->findOrFail();
+        // The Arabic twins of the agent's copy ride along in the theme JSON:
+        // agents has no Arabic columns, and shared hosting has no CLI to run a
+        // migration, so a JSON key keeps this deployable by file copy alone.
         $theme = [
-            'primary'  => (string) $request->input('theme_primary', '#4f46e5'),
-            'accent'   => (string) $request->input('theme_accent', '#7c3aed'),
-            'position' => $request->input('theme_position') === 'left' ? 'left' : 'right',
-            'launcher' => (string) $request->input('theme_launcher', '💬'),
-            'subtitle' => (string) $request->input('theme_subtitle', 'Typically replies instantly'),
+            'primary'     => (string) $request->input('theme_primary', '#4f46e5'),
+            'accent'      => (string) $request->input('theme_accent', '#7c3aed'),
+            'position'    => $request->input('theme_position') === 'left' ? 'left' : 'right',
+            'launcher'    => (string) $request->input('theme_launcher', '💬'),
+            'subtitle'    => (string) $request->input('theme_subtitle', 'Typically replies instantly'),
+            'subtitle_ar' => (string) $request->input('theme_subtitle_ar', ''),
+            'name_ar'     => (string) $request->input('theme_name_ar', ''),
+            'welcome_ar'  => (string) $request->input('theme_welcome_ar', ''),
         ];
         $this->agents->update((int) $agent['id'], [
             'name'              => (string) $request->input('name', $agent['name']),
@@ -310,13 +316,15 @@ final class AdminController
 
     public function savePrivacy(Request $request): void
     {
-        // Rebuild the startup-form config from the posted controls.
+        // Rebuild the startup-form config from the posted controls. Every
+        // visitor-facing string is stored as an EN/AR pair; the widget picks.
         $fieldKeys = ['name', 'email', 'phone', 'company'];
         $fields = [];
         foreach ($fieldKeys as $k) {
             $fields[] = [
                 'key'      => $k,
                 'label'    => (string) $request->input("label_{$k}", ucfirst($k)),
+                'label_ar' => (string) $request->input("label_{$k}_ar", ''),
                 'enabled'  => (bool) $request->input("enabled_{$k}", false),
                 'required' => (bool) $request->input("required_{$k}", false),
             ];
@@ -324,10 +332,13 @@ final class AdminController
         $this->settings->setJson('startup_form', [
             'enabled'          => (bool) $request->input('form_enabled', false),
             'title'            => (string) $request->input('form_title', 'Before we start'),
+            'title_ar'         => (string) $request->input('form_title_ar', ''),
             'subtitle'         => (string) $request->input('form_subtitle', ''),
+            'subtitle_ar'      => (string) $request->input('form_subtitle_ar', ''),
             'fields'           => $fields,
             'consent_required' => (bool) $request->input('consent_required', false),
             'consent_text'     => (string) $request->input('consent_text', ''),
+            'consent_text_ar'  => (string) $request->input('consent_text_ar', ''),
         ]);
         $this->settings->setJson('compliance', [
             'pii_redaction'  => (bool) $request->input('pii_redaction', false),

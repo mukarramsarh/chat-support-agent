@@ -48,21 +48,32 @@ final class SettingsRepository
         $this->set($key, json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     }
 
-    /** Startup lead-form config (with safe defaults). @return array<string,mixed> */
+    /**
+     * Startup lead-form config (with safe defaults).
+     *
+     * Every visitor-facing string has an Arabic twin under the `_ar` suffix; the
+     * widget picks one per visitor language. Arabic is shipped by default so an
+     * Arabic visitor never falls back to English copy.
+     *
+     * @return array<string,mixed>
+     */
     public function startupForm(): array
     {
         return $this->getJson('startup_form', [
             'enabled'          => false,
             'title'            => 'Before we start',
+            'title_ar'         => 'قبل أن نبدأ',
             'subtitle'         => 'Tell us a little about you.',
+            'subtitle_ar'      => 'أخبرنا قليلاً عنك.',
             'fields'           => [
-                ['key' => 'name',    'label' => 'Name',    'enabled' => true,  'required' => true],
-                ['key' => 'email',   'label' => 'Email',   'enabled' => true,  'required' => true],
-                ['key' => 'phone',   'label' => 'Phone',   'enabled' => false, 'required' => false],
-                ['key' => 'company', 'label' => 'Company', 'enabled' => false, 'required' => false],
+                ['key' => 'name',    'label' => 'Name',    'label_ar' => 'الاسم',   'enabled' => true,  'required' => true],
+                ['key' => 'email',   'label' => 'Email',   'label_ar' => 'البريد الإلكتروني', 'enabled' => true,  'required' => true],
+                ['key' => 'phone',   'label' => 'Phone',   'label_ar' => 'رقم الجوال', 'enabled' => false, 'required' => false],
+                ['key' => 'company', 'label' => 'Company', 'label_ar' => 'الشركة',  'enabled' => false, 'required' => false],
             ],
             'consent_required' => true,
             'consent_text'     => 'I agree to the processing of my personal data to receive support, in line with the privacy policy.',
+            'consent_text_ar'  => 'أوافق على معالجة بياناتي الشخصية لتقديم الدعم، وفقاً لسياسة الخصوصية.',
         ]);
     }
 

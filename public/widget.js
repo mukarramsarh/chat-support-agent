@@ -34,8 +34,33 @@
   var cfg = {
     primary: '#4f46e5', accent: '#7c3aed', position: 'right',
     launcher: '💬', title: 'Support', subtitle: 'Typically replies instantly',
-    welcome: 'Hi! How can I help you today?', form: null, rtl: false
+    welcome: 'Hi! How can I help you today?', form: null, rtl: false, lang: 'en'
   };
+
+  /**
+   * The visitor's language, so an Arabic page gets an Arabic popup and an
+   * English page an English one — mirroring the rule that the assistant answers
+   * in the language it was asked in. Explicit wins over inferred; the server's
+   * default_lang is the last resort. Returns null when nothing is conclusive.
+   */
+  function detectLang() {
+    var forced = (self.getAttribute('data-lang') || '').toLowerCase().slice(0, 2);
+    if (forced === 'ar' || forced === 'en') { return forced; }
+
+    var html = document.documentElement;
+    var pageLang = (html.getAttribute('lang') || '').toLowerCase();
+    if (pageLang) { return pageLang.slice(0, 2) === 'ar' ? 'ar' : 'en'; }
+    if ((html.getAttribute('dir') || '').toLowerCase() === 'rtl') { return 'ar'; }
+
+    var nav = (navigator.language || '').toLowerCase();
+    if (nav.slice(0, 2) === 'ar') { return 'ar'; }
+    return null;
+  }
+
+  /** Pick the copy for the active language, falling back to the other one. */
+  function pick(en, ar) {
+    return (cfg.lang === 'ar' ? (ar || en) : (en || ar)) || '';
+  }
 
   // UI strings, picked by direction (Arabic when rtl).
   function strings() {
@@ -57,15 +82,18 @@
     .then(function (data) {
       if (data && data.agent) {
         var t = data.agent.theme || {};
+        // Language first — every string below is chosen against it.
+        cfg.lang = detectLang() || data.default_lang || 'en';
+        cfg.rtl = cfg.lang === 'ar';
+
         cfg.primary = t.primary || cfg.primary;
         cfg.accent = t.accent || cfg.accent;
         cfg.position = t.position || cfg.position;
         cfg.launcher = t.launcher || cfg.launcher;
-        cfg.title = t.title || data.agent.name || cfg.title;
-        cfg.subtitle = t.subtitle || cfg.subtitle;
-        cfg.welcome = data.agent.welcome_message || cfg.welcome;
+        cfg.title = pick(t.title || data.agent.name, t.title_ar || data.agent.name_ar) || cfg.title;
+        cfg.subtitle = pick(t.subtitle, t.subtitle_ar) || cfg.subtitle;
+        cfg.welcome = pick(data.agent.welcome_message, data.agent.welcome_message_ar) || cfg.welcome;
         cfg.form = data.startup_form || null;
-        cfg.rtl = !!data.rtl;
       }
     })
     .catch(function () {})
@@ -137,16 +165,18 @@
       log.style.display = 'none';
       form.style.display = 'none';
       var f = cfg.form;
-      var html = '<div class="sa-gate-title">' + esc(f.title || '') + '</div>' +
-                 (f.subtitle ? '<div class="sa-gate-sub">' + esc(f.subtitle) + '</div>' : '');
+      var gateTitle = pick(f.title, f.title_ar);
+      var gateSub = pick(f.subtitle, f.subtitle_ar);
+      var html = '<div class="sa-gate-title">' + esc(gateTitle) + '</div>' +
+                 (gateSub ? '<div class="sa-gate-sub">' + esc(gateSub) + '</div>' : '');
       f.fields.forEach(function (fld) {
         var type = fld.key === 'email' ? 'email' : (fld.key === 'phone' ? 'tel' : 'text');
         html += '<input class="sa-gate-in" data-key="' + esc(fld.key) + '" type="' + type + '" placeholder="' +
-                esc(fld.label) + (fld.required ? ' *' : '') + '" ' + (fld.required ? 'required' : '') + '>';
+                esc(pick(fld.label, fld.label_ar)) + (fld.required ? ' *' : '') + '" ' + (fld.required ? 'required' : '') + '>';
       });
       if (f.consent_required) {
         html += '<label class="sa-gate-consent"><input type="checkbox" class="sa-gate-agree"> <span>' +
-                esc(f.consent_text || 'I agree to the processing of my data.') +
+                esc(pick(f.consent_text, f.consent_text_ar) || 'I agree to the processing of my data.') +
                 (f.privacy_url ? ' <a href="' + esc(f.privacy_url) + '" target="_blank">' + esc(S.privacy) + '</a>' : '') + '</span></label>';
       }
       html += '<div class="sa-gate-err" style="display:none"></div>' +
@@ -158,7 +188,10 @@
 
       var err = gate.querySelector('.sa-gate-err');
       gate.querySelector('.sa-gate-btn').addEventListener('click', function () {
-        var payload = { visitor_id: visitorId, conversation_id: conversationId || '', page_url: location.href, consent: false };
+        var payload = {
+          visitor_id: visitorId, conversation_id: conversationId || '',
+          page_url: location.href, consent: false, lang: cfg.lang
+        };
         var ok = true;
         gate.querySelectorAll('.sa-gate-in').forEach(function (el) {
           var v = el.value.trim();

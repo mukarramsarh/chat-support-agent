@@ -97,6 +97,10 @@ final class ChatController
             return;
         }
 
+        // Answer validation errors in the visitor's own language, like the rest
+        // of the widget. The widget reports the language it rendered in.
+        $ar = strtolower((string) $request->input('lang', '')) === 'ar';
+
         // Collect only configured, enabled fields.
         $fields = [];
         foreach ($form['fields'] as $f) {
@@ -105,11 +109,12 @@ final class ChatController
             }
             $val = trim((string) $request->input($f['key'], ''));
             if (!empty($f['required']) && $val === '') {
-                Response::error("Field '{$f['label']}' is required.", 422);
+                $label = $ar ? (($f['label_ar'] ?? '') ?: $f['label']) : $f['label'];
+                Response::error($ar ? "الحقل «{$label}» مطلوب." : "Field '{$label}' is required.", 422);
                 return;
             }
             if ($f['key'] === 'email' && $val !== '' && !filter_var($val, FILTER_VALIDATE_EMAIL)) {
-                Response::error('Please enter a valid email address.', 422);
+                Response::error($ar ? 'يرجى إدخال بريد إلكتروني صحيح.' : 'Please enter a valid email address.', 422);
                 return;
             }
             if ($val !== '') {
