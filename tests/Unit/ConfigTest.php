@@ -39,4 +39,35 @@ final class ConfigTest extends TestCase
         self::assertSame(20, $this->config->int('budget.top_k'));
         self::assertTrue($this->config->bool('app.debug'));
     }
+
+    public function testBasePathNormalisation(): void
+    {
+        self::assertSame('', Config::basePath(''));
+        self::assertSame('', Config::basePath('/'));
+        self::assertSame('/chatbot', Config::basePath('chatbot'));
+        self::assertSame('/chatbot', Config::basePath('/chatbot'));
+        self::assertSame('/chatbot', Config::basePath('/chatbot/'));
+    }
+
+    /**
+     * The installer runs before .env exists, so the base path must be derivable
+     * from the script location alone.
+     */
+    public function testDetectBasePathFromScriptName(): void
+    {
+        $_SERVER['SCRIPT_NAME'] = '/chatbot/public/index.php';
+        self::assertSame('/chatbot', Config::detectBasePath());
+
+        // docroot points straight at public/ → app is at the domain root
+        $_SERVER['SCRIPT_NAME'] = '/index.php';
+        self::assertSame('', Config::detectBasePath());
+
+        // app at root of docroot's parent
+        $_SERVER['SCRIPT_NAME'] = '/public/index.php';
+        self::assertSame('', Config::detectBasePath());
+
+        // nested sub-directory
+        $_SERVER['SCRIPT_NAME'] = '/apps/chatbot/public/seed.php';
+        self::assertSame('/apps/chatbot', Config::detectBasePath());
+    }
 }

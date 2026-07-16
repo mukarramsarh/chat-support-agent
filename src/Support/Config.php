@@ -115,4 +115,31 @@ final class Config
         $v = trim((string) $value, "/ \t");
         return $v === '' ? '' : '/' . $v;
     }
+
+    /**
+     * The effective base path: APP_BASE_PATH when set, otherwise auto-detected
+     * from the running script's location. This matters because the INSTALLER is
+     * itself behind the base path — without auto-detection a sub-directory
+     * deploy 404s before there is any .env to configure.
+     *
+     * e.g. SCRIPT_NAME '/chatbot/public/index.php' → '/chatbot'
+     *      SCRIPT_NAME '/index.php'                → ''      (docroot is public/)
+     */
+    public static function detectBasePath(): string
+    {
+        $explicit = (string) Env::get('APP_BASE_PATH', '');
+        if (trim($explicit, "/ \t") !== '') {
+            return self::basePath($explicit);
+        }
+
+        $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+        if ($script === '') {
+            return '';
+        }
+        $dir = rtrim(dirname($script), '/');
+        if (str_ends_with($dir, '/public')) {
+            $dir = substr($dir, 0, -strlen('/public'));
+        }
+        return self::basePath($dir);
+    }
 }

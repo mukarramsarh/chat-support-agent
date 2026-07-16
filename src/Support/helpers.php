@@ -38,7 +38,7 @@ if (!function_exists('u')) {
      */
     function u(string $path = ''): string
     {
-        $base = Config::basePath(Env::get('APP_BASE_PATH', ''));
+        $base = Config::detectBasePath();
         if ($path === '' || $path === '/') {
             return $base === '' ? '/' : $base;
         }

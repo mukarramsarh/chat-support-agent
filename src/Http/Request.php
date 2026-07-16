@@ -32,8 +32,9 @@ final class Request
         $uri = $_SERVER['REQUEST_URI'] ?? '/';
         $path = rtrim(parse_url($uri, PHP_URL_PATH) ?: '/', '/') ?: '/';
 
-        // Strip the sub-directory base path (APP_BASE_PATH) so routes match at root.
-        $base = \SupportAI\Support\Config::basePath(\SupportAI\Support\Env::get('APP_BASE_PATH', ''));
+        // Strip the sub-directory base path so routes match at root. Auto-detected
+        // when APP_BASE_PATH isn't set (the installer runs before .env exists).
+        $base = \SupportAI\Support\Config::detectBasePath();
         if ($base !== '' && ($path === $base || str_starts_with($path, $base . '/'))) {
             $path = substr($path, strlen($base)) ?: '/';
         }
