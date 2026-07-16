@@ -115,8 +115,10 @@
 
     // Decide whether to show the pre-chat form or go straight to chat.
     function needGate() {
-      return cfg.form && cfg.form.fields && cfg.form.fields.length &&
-             !LS.getItem('sa_lead_' + AGENT);
+      if (!cfg.form || LS.getItem('sa_lead_' + AGENT)) { return false; }
+      var hasFields = !!(cfg.form.fields && cfg.form.fields.length);
+      // Consent alone still needs the gate, or it would never be recorded.
+      return hasFields || !!cfg.form.consent_required;
     }
     function start() {
       if (needGate()) { showGate(); }
@@ -150,7 +152,9 @@
       html += '<div class="sa-gate-err" style="display:none"></div>' +
               '<button class="sa-gate-btn" type="button">' + esc(S.start) + '</button>';
       gate.innerHTML = html;
-      gate.style.display = '';
+      // Explicit value, not '': #sa-gate's stylesheet default is display:none,
+      // so clearing the inline style would leave the gate hidden.
+      gate.style.display = 'flex';
 
       var err = gate.querySelector('.sa-gate-err');
       gate.querySelector('.sa-gate-btn').addEventListener('click', function () {
