@@ -103,15 +103,40 @@ final class WidgetController
         echo is_readable($path) ? file_get_contents($path) : '/* widget.js missing */';
     }
 
-    /** A self-contained page to preview the widget during development. */
+    /**
+     * A self-contained page to preview the widget during development.
+     *
+     * ?lang=ar flips the page's own lang/dir rather than configuring the widget:
+     * that is exactly the signal a real bilingual site gives, so what you see
+     * here is what a visitor on the Arabic side of the site gets.
+     */
     public function demo(Request $request): void
     {
         $base = e($this->config->string('app.url'));
         $agent = $this->agents->find();
         $publicId = e($agent['public_id'] ?? '');
 
+        $ar = strtolower((string) $request->input('lang', '')) === 'ar';
+        $lang = $ar ? 'ar' : 'en';
+        $dir = $ar ? 'rtl' : 'ltr';
+        $demoUrl = u('/demo');
+
+        $title = $ar ? 'معاينة أداة الدعم' : 'Support widget preview';
+        $intro = $ar
+            ? 'تُضمِّن هذه الصفحة الأداة تماماً كما يفعل موقع العميل، باستخدام الكود المختصر أدناه.'
+            : "This page embeds the widget exactly as a customer's site would, using the shortcode below.";
+        $hint = $ar
+            ? 'اضغط على الأيقونة في الزاوية لبدء المحادثة، أو استخدم هذا الزر:'
+            : 'Click the launcher in the corner to start chatting, or use this inline trigger:';
+        $cta = $ar ? '💬 تحدّث معنا' : '💬 Chat with us';
+        $note = $ar
+            ? 'اللغة مأخوذة من سمة <code>lang</code> في الصفحة — لا إعداد إضافي.'
+            : 'Language follows the page\'s <code>lang</code> attribute — nothing to configure.';
+        $enOn = $ar ? '' : 'background:#4f46e5;color:#fff;border-color:#4f46e5';
+        $arOn = $ar ? 'background:#4f46e5;color:#fff;border-color:#4f46e5' : '';
+
         Response::html(<<<HTML
-        <!doctype html><html lang="en"><head>
+        <!doctype html><html lang="{$lang}" dir="{$dir}"><head>
         <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
         <title>Widget demo · support-ai</title>
         <style>
@@ -120,13 +145,21 @@ final class WidgetController
           .wrap{max-width:720px;margin:0 auto;padding:80px 24px}
           h1{font-size:2rem;margin:0 0 .5rem}p{color:#475569}
           code{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:2px 8px}
+          .langbar{display:flex;gap:8px;margin-bottom:28px}
+          .langbar a{display:inline-block;padding:6px 16px;border:1px solid #cbd5e1;border-radius:999px;
+                     background:#fff;color:#475569;text-decoration:none;font-size:14px;font-weight:600}
         </style></head><body>
           <div class="wrap">
-            <h1>Support widget preview</h1>
-            <p>This page embeds the widget exactly as a customer's site would, using the shortcode below.</p>
+            <div class="langbar">
+              <a href="{$demoUrl}?lang=en" style="{$enOn}">English</a>
+              <a href="{$demoUrl}?lang=ar" style="{$arOn}">العربية</a>
+            </div>
+            <h1>{$title}</h1>
+            <p>{$intro}</p>
             <p><code>&lt;script src="{$base}/widget.js" data-agent="{$publicId}" defer&gt;&lt;/script&gt;</code></p>
-            <p>Click the launcher in the corner to start chatting, or use this inline trigger:</p>
-            <p><a href="#" data-support-ai-open style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:600">💬 Chat with us</a></p>
+            <p>{$hint}</p>
+            <p><a href="#" data-support-ai-open style="display:inline-block;background:#4f46e5;color:#fff;padding:10px 18px;border-radius:10px;text-decoration:none;font-weight:600">{$cta}</a></p>
+            <p style="font-size:14px">{$note}</p>
           </div>
           <script src="{$base}/widget.js" data-agent="{$publicId}" defer></script>
         </body></html>
