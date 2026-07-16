@@ -52,10 +52,23 @@ If it can't write `.env` (permissions), it shows the file contents — create `.
 Ensure `chatbot/storage/` is writable (`755` or `775`). The installer's pre-flight page
 flags this.
 
-## 6. Seed the ProcurementHub data + context
-Run once (this creates the bilingual persona, 20 knowledge docs, and the eval set):
-- **Terminal:** `php bin/console demo`
-- **or** cPanel → **Cron Jobs** → add a one-off job `php /home/USER/staging-dev.procurementhub.sa/chatbot/bin/console demo`, let it run once, then delete it.
+## 6. Seed the ProcurementHub data + context — **no terminal needed**
+This creates the bilingual master prompt, 20 knowledge docs (company + Saudi
+procurement/local-content), and the eval set.
+
+**Easiest:** open `/chatbot/admin` → create your owner account → go to **Knowledge**
+→ click **⚡ Seed ProcurementHub data**. (It runs while you're signed in.)
+
+**Or by URL** (no login needed) — the installer generated a `SEED_TOKEN` in `.env`:
+```
+https://staging-dev.procurementhub.sa/chatbot/seed.php?token=YOUR_SEED_TOKEN
+```
+Open `.env` in cPanel **File Manager** to copy the token. It prints progress and a
+summary. Takes ~30–60s (each document is embedded).
+
+Re-running it is safe — it replaces the knowledge base with a fresh seed.
+
+> Prefer CLI? `php bin/console demo` does the same thing.
 
 ## 7. Configure in the admin
 Open **`/chatbot/admin`** and create the owner account (first visit).
@@ -65,14 +78,12 @@ Open **`/chatbot/admin`** and create the owner account (first visit).
 - Sidebar language switcher: **EN / العربية**.
 
 ## 8. Recurring cron (recrawl + memory + retention)
+No terminal needed — the installer generated a `CRON_TOKEN` in `.env`.
 cPanel → **Cron Jobs** → every 5 minutes:
 ```
-php /home/USER/staging-dev.procurementhub.sa/chatbot/bin/console cron
+curl -s "https://staging-dev.procurementhub.sa/chatbot/cron.php?token=YOUR_CRON_TOKEN"
 ```
-No shell cron? Set `CRON_TOKEN=somesecret` in `.env` and schedule:
-```
-curl -s "https://staging-dev.procurementhub.sa/chatbot/cron.php?token=somesecret"
-```
+> Have shell? `php /home/USER/.../chatbot/bin/console cron` works too.
 
 ## 9. Embed the widget on your website
 Copy the exact snippet from the **Agent** page (it has your agent id). It looks like:

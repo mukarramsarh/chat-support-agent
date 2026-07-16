@@ -16,6 +16,13 @@
     <?php endif; ?>
   </p>
 
+  <div style="margin:10px 0 16px;padding:10px 14px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+    <span style="font-size:13px;color:var(--muted)">First-time setup? Load the ProcurementHub knowledge base (company info + Saudi procurement rules, AR/EN).</span>
+    <a class="btn ghost" style="padding:6px 12px;font-size:13px;margin-inline-start:auto"
+       href="<?= u('/seed.php') ?>" target="_blank"
+       onclick="return confirm('This REPLACES the current knowledge base with the ProcurementHub seed. Continue?')">⚡ Seed ProcurementHub data</a>
+  </div>
+
   <div class="tabs" style="display:flex;gap:8px;margin:8px 0 18px">
     <button class="tab-btn btn ghost on" data-tab="text">✍️ Paste text</button>
     <button class="tab-btn btn ghost" data-tab="url">🔗 Add URL</button>

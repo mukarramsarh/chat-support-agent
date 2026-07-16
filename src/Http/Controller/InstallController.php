@@ -160,6 +160,10 @@ final class InstallController
             'EMBEDDING_MODEL=text-embedding-3-small',
             'EMBEDDING_DIMENSIONS=' . ($in('embedding_dims') ?: '1536'),
             '', 'MONTHLY_BUDGET_USD=2.00', 'ENABLE_EVAL=true', 'INGEST_ASYNC=false',
+            // Auto-generated so seed.php / cron.php can be triggered by URL on
+            // hosts without a terminal.
+            '', 'SEED_TOKEN=' . bin2hex(random_bytes(16)),
+            'CRON_TOKEN=' . bin2hex(random_bytes(16)),
         ];
         return implode("\n", $lines) . "\n";
     }

@@ -289,7 +289,16 @@ PROMPT;
 
     private function seedEvalSet(int $agentId): int
     {
-        $setId = $this->evals->createSet($agentId, 'ProcurementHub QA (AR/EN)');
+        $name = 'ProcurementHub QA (AR/EN)';
+
+        // Replace (don't duplicate) the set on re-seed.
+        foreach ($this->evals->sets($agentId) as $existing) {
+            if (($existing['name'] ?? '') === $name) {
+                $this->evals->deleteSet((int) $existing['id']);
+            }
+        }
+
+        $setId = $this->evals->createSet($agentId, $name);
         $cases = [
             // Company
             ['When was Procurement Hub established and where is it based?', 'In 2016, in Riyadh, Saudi Arabia.', ['2016', 'Riyadh']],
