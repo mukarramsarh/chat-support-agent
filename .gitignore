@@ -7,3 +7,8 @@
 composer.lock
 /.phpunit.cache/
 /.phpunit.result.cache
+
+# deployment archives
+*.zip
+*.tgz
+*.b64
