@@ -257,7 +257,10 @@
             conversationId = payload.conversation_id; LS.setItem('sa_conversation_' + AGENT, conversationId);
           } else if (event === 'token') {
             if (!bubble) { typing.remove(); bubble = addMessage('bot', ''); }
-            bubble.textContent += payload.text; scroll();
+            // Keep the raw markdown and re-render it each token so **bold**,
+            // *italic*, `code`, links and bullets display formatted, not literal.
+            bubble._raw = (bubble._raw || '') + payload.text;
+            bubble.innerHTML = renderMd(bubble._raw); scroll();
           } else if (event === 'error') {
             if (typing.parentNode) { typing.remove(); }
             addMessage('bot', payload.message || S.genErr);
@@ -274,7 +277,11 @@
 
     function addMessage(who, text) {
       var el = document.createElement('div');
-      el.className = 'sa-msg sa-' + who; el.textContent = text;
+      el.className = 'sa-msg sa-' + who;
+      // Visitor text is never treated as markup (safety); bot text is rendered
+      // through the safe markdown formatter so it reads clean.
+      if (who === 'user') { el.textContent = text; }
+      else { el._raw = text || ''; el.innerHTML = renderMd(el._raw); }
       log.appendChild(el); scroll(); return el;
     }
     function addTyping() {
@@ -309,6 +316,9 @@
     '.sa-msg{max-width:80%;padding:11px 15px;border-radius:16px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-wrap:break-word;animation:sa-in .2s ease}' +
     '.sa-bot{align-self:flex-start;background:#fff;color:#0f172a;border:1px solid #e5e7eb;border-bottom-left-radius:4px}' +
     '.sa-user{align-self:flex-end;background:linear-gradient(135deg,' + cfg.primary + ',' + cfg.accent + ');color:#fff;border-bottom-right-radius:4px}' +
+    '.sa-bot a{color:' + cfg.primary + ';text-decoration:underline;word-break:break-word}' +
+    '.sa-bot strong{font-weight:700}.sa-bot em{font-style:italic}' +
+    '.sa-bot code{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:5px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}' +
     '.sa-typing{display:flex;gap:4px;align-items:center}' +
     '.sa-typing span{width:7px;height:7px;border-radius:50%;background:#cbd5e1;animation:sa-bounce 1.2s infinite}' +
     '.sa-typing span:nth-child(2){animation-delay:.2s}.sa-typing span:nth-child(3){animation-delay:.4s}' +
@@ -346,4 +356,25 @@
   function esc(s) { return String(s).replace(/[&<>"]/g, function (c) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
   }); }
+
+  /**
+   * Render a SAFE, minimal subset of markdown for bot replies. Every input is
+   * HTML-escaped FIRST, so the only markup that reaches the DOM is the handful
+   * of tags produced here — no injection is possible even if the model (or the
+   * knowledge base) emits raw HTML. Links are restricted to http(s).
+   */
+  function renderMd(raw) {
+    return String(raw).split('\n').map(function (line) {
+      var s = esc(line);
+      s = s.replace(/^\s{0,3}#{1,6}\s+/, '');          // headings → plain text
+      s = s.replace(/^(\s*)[-*+]\s+/, '$1• ');         // bullet markers → •
+      s = s.replace(/`([^`]+)`/g, '<code>$1</code>');  // `code`
+      s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      s = s.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+      s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>'); // *italic*
+      s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+        function (m, t, u) { return '<a href="' + u + '" target="_blank" rel="noopener noreferrer">' + t + '</a>'; });
+      return s;
+    }).join('\n');
+  }
 })();
