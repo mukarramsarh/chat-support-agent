@@ -23,6 +23,15 @@ final class RateLimiter
      */
     public function tooMany(string $key, int $max, int $windowSeconds): bool
     {
+        return $this->hit($key, $windowSeconds) > $max;
+    }
+
+    /**
+     * Increment the counter for $key in the current window and return the new
+     * count. The building block for both tooMany() and escalating penalties.
+     */
+    public function hit(string $key, int $windowSeconds): int
+    {
         $bucket = $key . ':' . (int) floor(time() / $windowSeconds);
         $expires = date('Y-m-d H:i:s', time() + $windowSeconds);
 
@@ -37,7 +46,7 @@ final class RateLimiter
         if (random_int(1, 100) === 1) {
             $this->db->run('DELETE FROM rate_limits WHERE expires_at < NOW()');
         }
-        return $hits > $max;
+        return $hits;
     }
 
     /** Count current hits without incrementing (for lockout checks). */

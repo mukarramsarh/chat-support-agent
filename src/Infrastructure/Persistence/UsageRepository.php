@@ -57,6 +57,23 @@ final class UsageRepository
         return (float) ($this->db->first($sql, $params)['spend'] ?? 0);
     }
 
+    /**
+     * Spend since midnight (server time). This is the velocity backstop: the
+     * monthly cap bounds total loss, but the daily cap bounds how fast abuse can
+     * drain it — one bad actor can't burn a whole month of budget in an hour.
+     */
+    public function todaySpend(?int $agentId = null): float
+    {
+        $sql = 'SELECT COALESCE(SUM(cost_usd), 0) AS spend FROM usage_log
+                 WHERE usage_day = CURDATE()';
+        $params = [];
+        if ($agentId !== null) {
+            $sql .= ' AND agent_id = :aid';
+            $params['aid'] = $agentId;
+        }
+        return (float) ($this->db->first($sql, $params)['spend'] ?? 0);
+    }
+
     /** @return array<int,array{usage_day:string,cost:float,calls:int}> daily spend for a window */
     public function dailySpend(int $days = 30): array
     {

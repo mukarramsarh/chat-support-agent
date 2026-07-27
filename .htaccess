@@ -8,7 +8,12 @@
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 
-# Block direct access to sensitive directories/files.
-<FilesMatch "\.(env|sql|md|json|lock)$">
+# Block direct access to sensitive files (secrets, dumps, logs, deploy archives).
+<FilesMatch "\.(env|sql|md|json|lock|log|ini|sh|b64|tgz|zip|bak|dist)$">
+    Require all denied
+</FilesMatch>
+
+# Block dotfiles (.env, .git, .htpasswd, …).
+<FilesMatch "^\.">
     Require all denied
 </FilesMatch>

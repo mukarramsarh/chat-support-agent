@@ -6,6 +6,7 @@ namespace SupportAI\Application\Ingestion;
 
 use RuntimeException;
 use SupportAI\Support\Http\HttpClient;
+use SupportAI\Support\Http\UrlGuard;
 use Throwable;
 
 /**
@@ -44,6 +45,9 @@ final class TextExtractor
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
             throw new RuntimeException('Please enter a valid URL.');
         }
+        // SSRF guard: refuse http(s) URLs that resolve to private/internal IPs
+        // before we make the server fetch them.
+        UrlGuard::assertPublic($url);
         $res = $this->http->request('GET', $url, ['User-Agent' => 'support-ai-bot/1.0']);
         $res->throwIfError('Fetch URL');
         $html = $res->body;

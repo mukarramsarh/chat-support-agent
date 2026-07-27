@@ -47,6 +47,7 @@ use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Support\PiiRedactor;
 use SupportAI\Support\RateLimiter;
+use SupportAI\Support\Throttle;
 use SupportAI\Infrastructure\Vector\VectorStoreFactory;
 use SupportAI\Support\Config;
 use SupportAI\Support\Container;
@@ -62,14 +63,31 @@ Env::load(__DIR__ . '/.env');
 $config = Config::fromEnv();
 date_default_timezone_set($config->string('app.timezone', 'UTC'));
 
+// Harden session cookies once, before any session_start() runs anywhere. Covers
+// every entry point (admin, seed, cron) without each having to remember to.
+if (PHP_SAPI !== 'cli' && session_status() !== PHP_SESSION_ACTIVE) {
+    $https = (($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? 'off') !== 'off')
+        || ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https';
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    if ($https) {
+        ini_set('session.cookie_secure', '1');
+    }
+}
+
 $c = new Container();
 $c->instance(Config::class, $config);
 
 $c->set(Logger::class, fn () => new Logger(__DIR__ . '/storage/logs/app.log'));
 $c->set(HttpClient::class, fn () => new HttpClient(120));
-$c->set(Crypto::class, fn (Container $c) => new Crypto($c->get(Config::class)->string('app.key', 'insecure-dev-key-change-me')));
+// No default key: Crypto throws on a short/missing APP_KEY rather than silently
+// encrypting visitor PII with a publicly-known constant. Fails safe at the point
+// of use (leads/secrets); the installer always writes a strong APP_KEY.
+$c->set(Crypto::class, fn (Container $c) => new Crypto($c->get(Config::class)->string('app.key', '')));
 $c->set(Pricing::class, fn () => new Pricing());
 $c->set(RateLimiter::class, fn (Container $c) => new RateLimiter($c->get(Database::class)));
+$c->set(Throttle::class, fn (Container $c) => new Throttle($c->get(RateLimiter::class)));
 
 $c->set(Database::class, fn (Container $c) => new Database($c->get(Config::class)));
 
@@ -170,7 +188,7 @@ $c->set(ChatController::class, fn (Container $c) => new ChatController(
     $c->get(ChatService::class),
     $c->get(LeadRepository::class),
     $c->get(SettingsRepository::class),
-    $c->get(RateLimiter::class),
+    $c->get(Throttle::class),
 ));
 $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
     $c->get(AgentRepository::class),

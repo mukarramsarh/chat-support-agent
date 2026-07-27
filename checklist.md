@@ -143,7 +143,20 @@ Two ways to embed, sharing one widget instance:
   → relevant-message recall ✅; **rolling summaries ⬜**, **fact extraction into `memories` ⬜**
 - **Phase 4** — offline golden-Q&A eval harness in the admin. ✅ (/admin/evals: sets/cases/runs/results + scoring)
 - **Phase 5** — rate limiting, domain allowlist, key encryption at rest, prompt-injection hardening.
-  → rate limiting ✅, domain allowlist ✅, key encryption at rest ✅; **prompt-injection hardening ⬜**
+  → rate limiting ✅, domain allowlist ✅, key encryption at rest ✅; prompt-injection hardening ✅
+
+### Security hardening (see `.claude/skills/security-hardening/SKILL.md`)
+Token-abuse is the top concern — a public LLM endpoint is a direct line to the budget.
+- ✅ **Layered throttle** on chat/lead: per-IP + per-visitor + global ceiling, exponential backoff (`Throttle`)
+- ✅ **Daily spend circuit breaker** (`DAILY_BUDGET_USD`) on top of the monthly cap
+- ✅ **Strict input validation** (`Validator`, reject-not-sanitize) on public endpoints + unit tests
+- ✅ **APP_KEY fail-safe** — no insecure default; PII never encrypted with a known key
+- ✅ **SSRF guard** on URL ingestion (`UrlGuard`: http/https only, no private/internal IPs)
+- ✅ **Session hardening** — HttpOnly/SameSite/Secure cookies + regenerate id on login
+- ✅ **Error hygiene** — fatal-error shutdown handler; generic client messages, detail logged
+- ✅ **File access** — `storage/.htaccess` deny + tightened root `.htaccess`
+- ✅ **Secrets scan** clean (all via Env); **`composer audit`** clean
+- ⬜ Optional: 2FA, password-rotation policy, per-source visibility toggle
 
 ---
 

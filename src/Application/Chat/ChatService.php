@@ -66,9 +66,19 @@ final class ChatService
         $this->messages->addUser($conversationId, $userText);
 
         // ── Budget gate ──
+        // Two ceilings: the monthly cap bounds total spend, the daily cap bounds
+        // how FAST it can be spent. The daily one is the token-burn circuit
+        // breaker — abuse that slips past the request rate limits still cannot
+        // drain more than a day's allowance before the LLM is cut off.
         $budget = (float) ($agent['monthly_budget_usd'] ?? $this->config->float('budget.monthly_usd', 2.0));
         if ($this->usage->monthToDateSpend($agentId) >= $budget) {
             $this->logger->warning('Monthly budget reached; declining', ['agent' => $agentId]);
+            $this->declineForBudget($agent, $conversationId, $sse);
+            return;
+        }
+        $dailyCap = $this->config->float('budget.daily_usd', 0.0);
+        if ($dailyCap > 0 && $this->usage->todaySpend($agentId) >= $dailyCap) {
+            $this->logger->warning('Daily budget reached; declining', ['agent' => $agentId, 'cap' => $dailyCap]);
             $this->declineForBudget($agent, $conversationId, $sse);
             return;
         }

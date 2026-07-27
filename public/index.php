@@ -35,6 +35,21 @@ if ($config->bool('app.debug')) {
             Response::error('Internal server error', 500);
         }
     });
+    // Catch FATAL errors too (parse/E_ERROR) so the client never sees a blank
+    // page or a leaked path — a generic 500, with detail logged server-side.
+    register_shutdown_function(function () use ($container): void {
+        $err = error_get_last();
+        if ($err === null || !in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+            return;
+        }
+        $container->get(Logger::class)->error('Fatal error', [
+            'message' => $err['message'],
+            'file'    => ($err['file'] ?? '') . ':' . ($err['line'] ?? 0),
+        ]);
+        if (!headers_sent()) {
+            Response::error('Internal server error', 500);
+        }
+    });
 }
 
 // CORS preflight: the cross-origin widget sends OPTIONS before POSTing to the

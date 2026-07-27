@@ -55,6 +55,10 @@ final class Config
             ],
             'budget' => [
                 'monthly_usd'       => (float) Env::get('MONTHLY_BUDGET_USD', '2.00'),
+                // Velocity cap: bounds worst-case spend per day even under abuse.
+                // 0 disables it. Defaults to ~half the month's budget so a normal
+                // busy day is fine but a token-burning bot is stopped within cents.
+                'daily_usd'         => (float) Env::get('DAILY_BUDGET_USD', '1.00'),
                 'max_answer_tokens' => (int) Env::get('MAX_TOKENS_PER_ANSWER', '800'),
                 'top_k'             => (int) Env::get('RETRIEVAL_TOP_K', '20'),
                 'final_k'           => (int) Env::get('RETRIEVAL_FINAL_K', '5'),

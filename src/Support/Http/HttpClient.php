@@ -34,6 +34,9 @@ final class HttpClient
             CURLOPT_CONNECTTIMEOUT => 15,
             CURLOPT_FOLLOWLOCATION => true,  // follow http→https / www redirects
             CURLOPT_MAXREDIRS      => 5,
+            // Never let a redirect jump to file://, gopher://, etc. (SSRF).
+            CURLOPT_PROTOCOLS      => CURLPROTO_HTTP | CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTP | CURLPROTO_HTTPS,
             CURLOPT_ENCODING       => '',    // accept + auto-decompress gzip/br
         ]);
         if ($payload !== null) {

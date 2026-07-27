@@ -20,9 +20,13 @@ final class Response
         echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
-    public static function error(string $message, int $status = 400, array $extra = []): void
+    /**
+     * @param array<string,mixed> $extra  merged into the JSON body
+     * @param array<string,string> $headers  e.g. a Retry-After on a 429
+     */
+    public static function error(string $message, int $status = 400, array $extra = [], array $headers = []): void
     {
-        self::json(['error' => $message] + $extra, $status);
+        self::json(['error' => $message] + $extra, $status, $headers);
     }
 
     public static function html(string $html, int $status = 200): void

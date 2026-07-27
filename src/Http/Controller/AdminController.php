@@ -85,6 +85,7 @@ final class AdminController
                 return;
             }
             $id = $this->admins->create($email, 'Owner', password_hash($password, PASSWORD_DEFAULT), 'owner');
+            session_regenerate_id(true); // fresh id once authenticated (anti-fixation)
             $_SESSION['admin_id'] = $id;
             Response::redirect(u('/admin'));
             return;
@@ -97,6 +98,7 @@ final class AdminController
             return;
         }
         $this->rateLimiter->clear($lockKey, 900);
+        session_regenerate_id(true); // fresh id once authenticated (anti-fixation)
         $_SESSION['admin_id'] = (int) $user['id'];
         $this->admins->touchLogin((int) $user['id']);
         Response::redirect(u('/admin'));

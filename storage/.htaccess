@@ -1,0 +1,11 @@
+# Never serve anything under storage/ over the web — it holds logs (which may
+# contain PII) and uploaded source files. Defense-in-depth: with docroot set to
+# public/ this dir is already unreachable, but a misconfigured docroot must not
+# expose it.
+Require all denied
+
+# Legacy Apache (2.2) fallback.
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

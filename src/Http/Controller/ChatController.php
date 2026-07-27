@@ -12,22 +12,30 @@ use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
 use SupportAI\Infrastructure\Persistence\LeadRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
-use SupportAI\Support\RateLimiter;
+use SupportAI\Support\Throttle;
+use SupportAI\Support\ValidationException;
+use SupportAI\Support\Validator;
 
 /**
  * Public chat API consumed by the embedded widget. The main endpoint streams
- * the answer over SSE. CORS is scoped to the agent's domain allowlist so a
- * third party can't embed the widget and burn the budget.
+ * the answer over SSE. Three layers protect the token budget here: strict input
+ * validation, the layered Throttle (per-IP + per-visitor + global with
+ * exponential backoff), and — inside ChatService — the daily/monthly spend
+ * circuit breaker. CORS is scoped to the agent's domain allowlist too, but note
+ * CORS only stops browsers; the throttle is what stops a scripted bot.
  */
 final class ChatController
 {
+    /** Hard cap on a single visitor message (also bounds input tokens). */
+    private const MAX_MESSAGE_CHARS = 2000;
+
     public function __construct(
         private AgentRepository $agents,
         private ConversationRepository $conversations,
         private ChatService $chat,
         private LeadRepository $leads,
         private SettingsRepository $settings,
-        private RateLimiter $rateLimiter,
+        private Throttle $throttle,
     ) {
     }
 
@@ -35,19 +43,26 @@ final class ChatController
     {
         $this->applyCors($request);
 
-        // Rate limit: cap messages per IP per minute (abuse + budget protection).
-        if ($this->rateLimiter->tooMany('chat:' . $request->ip(), 30, 60)) {
-            Response::error('Too many messages. Please slow down.', 429);
+        // Strict validation first (reject, don't sanitize). visitor_id is needed
+        // for the throttle key, so it is validated up front inside the guard too.
+        try {
+            $visitorId = Validator::optionalId($request->input('visitor_id'), 'Session', 64)
+                ?: 'anon-' . bin2hex(random_bytes(6));
+            $text = Validator::string($request->input('message'), 'Message', 1, self::MAX_MESSAGE_CHARS);
+            $conversationId = Validator::optionalId($request->input('conversation_id'), 'Conversation', 64);
+            $pageUrl = Validator::optionalString($request->input('page_url'), 'Page URL', 2048);
+        } catch (ValidationException $e) {
+            Response::error($e->getMessage(), 422);
             return;
         }
 
-        $text = trim((string) $request->input('message', ''));
-        if ($text === '') {
-            Response::error('Message is required.', 422);
-            return;
-        }
-        if (mb_strlen($text) > 4000) {
-            Response::error('Message is too long.', 422);
+        // Layered abuse gate — the primary token-burn defence. Bots ignore CORS,
+        // so this (not the CORS header) is what actually caps the spend.
+        $decision = $this->throttle->chat($request->ip(), $visitorId);
+        if (!$decision['allowed']) {
+            Response::error('Too many messages. Please slow down.', 429, [
+                'retry_after' => $decision['retryAfter'],
+            ], ['Retry-After' => (string) $decision['retryAfter']]);
             return;
         }
 
@@ -57,12 +72,11 @@ final class ChatController
             return;
         }
 
-        $visitorId = substr((string) $request->input('visitor_id', ''), 0, 64) ?: 'anon-' . bin2hex(random_bytes(6));
         $conversation = $this->conversations->resolve(
             (int) $agent['id'],
-            (string) $request->input('conversation_id', ''),
+            $conversationId,
             $visitorId,
-            (string) $request->input('page_url', ''),
+            $pageUrl,
         );
 
         $sse = new SseStream();
@@ -81,8 +95,11 @@ final class ChatController
     public function lead(Request $request): void
     {
         $this->applyCors($request);
-        if ($this->rateLimiter->tooMany('lead:' . $request->ip(), 10, 60)) {
-            Response::error('Too many submissions. Please try again shortly.', 429);
+        $decision = $this->throttle->lead($request->ip());
+        if (!$decision['allowed']) {
+            Response::error('Too many submissions. Please try again shortly.', 429, [
+                'retry_after' => $decision['retryAfter'],
+            ], ['Retry-After' => (string) $decision['retryAfter']]);
             return;
         }
 
@@ -128,13 +145,19 @@ final class ChatController
             return;
         }
 
-        $visitorId = substr((string) $request->input('visitor_id', ''), 0, 64) ?: 'anon-' . bin2hex(random_bytes(6));
-        $conv = $this->conversations->resolve(
-            (int) $agent['id'],
-            (string) $request->input('conversation_id', ''),
-            $visitorId,
-            (string) $request->input('page_url', ''),
-        );
+        try {
+            $visitorId = Validator::optionalId($request->input('visitor_id'), 'Session', 64)
+                ?: 'anon-' . bin2hex(random_bytes(6));
+            $conv = $this->conversations->resolve(
+                (int) $agent['id'],
+                Validator::optionalId($request->input('conversation_id'), 'Conversation', 64),
+                $visitorId,
+                Validator::optionalString($request->input('page_url'), 'Page URL', 2048),
+            );
+        } catch (ValidationException $e) {
+            Response::error($e->getMessage(), 422);
+            return;
+        }
 
         $this->leads->create(
             (int) $agent['id'], (int) $conv['id'], $visitorId, $fields,
