@@ -53,6 +53,11 @@ final class Config
                 'embedding_model'    => Env::get('EMBEDDING_MODEL', 'text-embedding-3-small'),
                 'embedding_dims'     => (int) Env::get('EMBEDDING_DIMENSIONS', '1536'),
             ],
+            'auth' => [
+                // Shared HMAC secret for WordPress → admin SSO (empty = disabled).
+                'sso_secret' => (string) Env::get('SSO_SECRET', ''),
+                'sso_ttl'    => (int) Env::get('SSO_TTL_SECONDS', '60'),
+            ],
             'budget' => [
                 'monthly_usd'       => (float) Env::get('MONTHLY_BUDGET_USD', '2.00'),
                 // Velocity cap: bounds worst-case spend per day even under abuse.

@@ -23,6 +23,16 @@ final class AdminUserRepository
         return (int) ($this->db->first('SELECT COUNT(*) AS c FROM admin_users')['c'] ?? 0);
     }
 
+    /**
+     * The account SSO signs into: the owner if one exists, else the earliest
+     * admin. @return array<string,mixed>|null
+     */
+    public function firstOwner(): ?array
+    {
+        return $this->db->first("SELECT * FROM admin_users WHERE role = 'owner' ORDER BY id ASC LIMIT 1")
+            ?? $this->db->first('SELECT * FROM admin_users ORDER BY id ASC LIMIT 1');
+    }
+
     public function create(string $email, string $name, string $passwordHash, string $role = 'owner'): int
     {
         $this->db->run(

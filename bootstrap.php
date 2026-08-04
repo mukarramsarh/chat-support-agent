@@ -27,6 +27,7 @@ use SupportAI\Application\Eval\EvalRunner;
 use SupportAI\Http\Controller\DocumentController;
 use SupportAI\Http\Controller\EvalController;
 use SupportAI\Http\Controller\InstallController;
+use SupportAI\Http\Controller\SsoController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Infrastructure\Persistence\EvalRepository;
 use SupportAI\Infrastructure\Database\Database;
@@ -197,6 +198,12 @@ $c->set(WidgetController::class, fn (Container $c) => new WidgetController(
 ));
 $c->set(InstallController::class, fn (Container $c) => new InstallController(
     $c->get(Database::class),
+));
+$c->set(SsoController::class, fn (Container $c) => new SsoController(
+    $c->get(AdminUserRepository::class),
+    $c->get(AuditRepository::class),
+    $c->get(RateLimiter::class),
+    $c->get(Config::class),
 ));
 $c->set(EvalRepository::class, fn (Container $c) => new EvalRepository($c->get(Database::class)));
 $c->set(DemoSeeder::class, fn (Container $c) => new DemoSeeder(

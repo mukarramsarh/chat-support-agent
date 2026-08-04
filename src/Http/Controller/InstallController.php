@@ -148,6 +148,8 @@ final class InstallController
             'APP_URL=' . ($in('app_url') ?: 'http://localhost'),
             'APP_BASE_PATH=' . $in('base_path'),
             'APP_KEY=' . $key, 'APP_TIMEZONE=UTC',
+            // Shared secret for WordPress admin SSO (see integrations/wordpress/).
+            'SSO_SECRET=' . bin2hex(random_bytes(24)), 'SSO_TTL_SECONDS=60',
             '', 'DB_HOST=' . $db['host'], 'DB_PORT=' . $db['port'], 'DB_NAME=' . $db['name'],
             'DB_USER=' . $db['user'], 'DB_PASS=' . $db['pass'], 'DB_CHARSET=utf8mb4',
             '', 'VECTOR_DRIVER=auto',

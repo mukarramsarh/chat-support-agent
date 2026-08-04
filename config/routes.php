@@ -7,6 +7,7 @@ use SupportAI\Http\Controller\ChatController;
 use SupportAI\Http\Controller\DocumentController;
 use SupportAI\Http\Controller\EvalController;
 use SupportAI\Http\Controller\InstallController;
+use SupportAI\Http\Controller\SsoController;
 use SupportAI\Http\Controller\WidgetController;
 use SupportAI\Http\Middleware\AdminAuth;
 use SupportAI\Http\Middleware\VerifyCsrf;
@@ -33,6 +34,9 @@ return function (Router $router, Container $container): void {
     $router->post('/api/chat/message', [ChatController::class, 'message']);       // SSE stream
     $router->post('/api/chat/feedback', [ChatController::class, 'feedback']);
     $router->post('/api/chat/lead', [ChatController::class, 'lead']);             // startup form
+
+    // ── WordPress SSO (public: self-guards by HMAC signature) ──
+    $router->get('/admin/sso', [SsoController::class, 'login']);
 
     // ── Admin area (session-guarded) ──
     $router->get('/admin/login', [AdminController::class, 'loginForm']);
