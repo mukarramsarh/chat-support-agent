@@ -84,6 +84,10 @@ final class WidgetController
                     'title_ar'    => $theme['title_ar'] ?? ($theme['name_ar'] ?? ''),
                     'subtitle'    => $theme['subtitle'] ?? 'Typically replies instantly',
                     'subtitle_ar' => $theme['subtitle_ar'] ?? 'يرد عادةً خلال لحظات',
+                    // Attention "nudge" bubble by the launcher (bilingual).
+                    'nudge_enabled' => (bool) ($theme['nudge_enabled'] ?? false),
+                    'nudge'         => $theme['nudge'] ?? '',
+                    'nudge_ar'      => $theme['nudge_ar'] ?? '',
                 ],
             ],
             'startup_form' => $publicForm,

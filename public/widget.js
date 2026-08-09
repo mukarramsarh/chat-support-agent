@@ -34,7 +34,8 @@
   var cfg = {
     primary: '#4f46e5', accent: '#7c3aed', position: 'right',
     launcher: '💬', title: 'Support', subtitle: 'Typically replies instantly',
-    welcome: 'Hi! How can I help you today?', form: null, rtl: false, lang: 'en'
+    welcome: 'Hi! How can I help you today?', form: null, rtl: false, lang: 'en',
+    nudge: '', nudgeOn: false
   };
 
   /**
@@ -94,6 +95,8 @@
         cfg.subtitle = pick(t.subtitle, t.subtitle_ar) || cfg.subtitle;
         cfg.welcome = pick(data.agent.welcome_message, data.agent.welcome_message_ar) || cfg.welcome;
         cfg.form = data.startup_form || null;
+        cfg.nudgeOn = !!t.nudge_enabled;
+        cfg.nudge = pick(t.nudge, t.nudge_ar) || '';
       }
     })
     .catch(function () {})
@@ -113,6 +116,9 @@
     var input = root.getElementById('sa-input');
     var log = root.getElementById('sa-log');
     var gate = root.getElementById('sa-gate');
+    var nudge = root.getElementById('sa-nudge');
+    var nudgeText = root.getElementById('sa-nudge-t');
+    var nudgeClose = root.getElementById('sa-nudge-x');
     var open = false, greeted = false;
     var S = strings();
 
@@ -122,12 +128,33 @@
       open = show;
       panel.classList.toggle('open', open);
       launcher.classList.toggle('active', open);
-      if (open) { start(); }
+      if (open) { hideNudge(true); start(); }
     }
     launcher.addEventListener('click', function () { toggle(!open); });
     closeBtn.addEventListener('click', function () { toggle(false); });
 
     if (HIDE_LAUNCHER) { launcher.style.display = 'none'; }
+
+    // ── Attention nudge: a greeting bubble by the launcher ────────────────────
+    // Shown once per visitor (dismissal is remembered), only when the admin has
+    // enabled it and set copy. Clicking it opens the chat; × dismisses it.
+    function hideNudge(remember) {
+      if (!nudge) { return; }
+      nudge.classList.remove('show');
+      if (remember) { try { LS.setItem('sa_nudge_' + AGENT, '1'); } catch (e) {} }
+    }
+    function maybeNudge() {
+      if (!nudge || !cfg.nudgeOn || !cfg.nudge || HIDE_LAUNCHER) { return; }
+      if (LS.getItem('sa_nudge_' + AGENT) || open) { return; }
+      nudgeText.textContent = cfg.nudge;
+      if (cfg.rtl) { nudge.setAttribute('dir', 'rtl'); }
+      setTimeout(function () { if (!open) { nudge.classList.add('show'); } }, 1400);
+    }
+    if (nudge) {
+      nudge.addEventListener('click', function () { hideNudge(true); toggle(true); });
+      nudgeClose.addEventListener('click', function (e) { e.stopPropagation(); hideNudge(true); });
+      maybeNudge();
+    }
 
     // Public API — call from your own link/button: window.supportAI.open()
     window.supportAI = {
@@ -295,6 +322,7 @@
 
   function template() {
     var side = cfg.position === 'left' ? 'left:24px' : 'right:24px';
+    var nudgeTail = cfg.position === 'left' ? 'left:28px' : 'right:28px';
     var S = strings();
     return '' +
     '<style>' +
@@ -304,6 +332,20 @@
       'background:linear-gradient(135deg,' + cfg.primary + ',' + cfg.accent + ');color:#fff;font-size:26px;cursor:pointer;' +
       'box-shadow:0 10px 30px rgba(79,70,229,.4);transition:transform .2s;z-index:2147483000}' +
     '#sa-launcher:hover{transform:translateY(-3px) scale(1.05)}#sa-launcher.active{transform:rotate(90deg)}' +
+    '#sa-nudge{position:fixed;bottom:96px;' + side + ';max-width:250px;background:#fff;color:#0f172a;' +
+      'padding:13px 30px 13px 15px;border-radius:16px;border:1px solid #eef2f7;font-size:14px;line-height:1.45;' +
+      'box-shadow:0 12px 34px rgba(15,23,42,.18);cursor:pointer;opacity:0;transform:translateY(10px) scale(.96);' +
+      'transform-origin:bottom ' + (cfg.position === 'left' ? 'left' : 'right') + ';pointer-events:none;' +
+      'transition:opacity .28s ease,transform .28s cubic-bezier(.2,.9,.3,1.2);z-index:2147482999}' +
+    '#sa-nudge.show{opacity:1;transform:none;pointer-events:auto}' +
+    '#sa-nudge:hover{box-shadow:0 16px 40px rgba(15,23,42,.24)}' +
+    '#sa-nudge::after{content:"";position:absolute;bottom:-6px;' + nudgeTail + ';width:12px;height:12px;' +
+      'background:#fff;border-right:1px solid #eef2f7;border-bottom:1px solid #eef2f7;transform:rotate(45deg)}' +
+    '#sa-nudge[dir=rtl]{padding:13px 15px 13px 30px;text-align:right}' +
+    '#sa-nudge-x{position:absolute;top:5px;inset-inline-end:8px;background:transparent;border:0;color:#94a3b8;' +
+      'font-size:16px;line-height:1;cursor:pointer;padding:2px}#sa-nudge-x:hover{color:#475569}' +
+    '#sa-nudge-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-inline-end:7px;vertical-align:middle;' +
+      'background:linear-gradient(135deg,' + cfg.primary + ',' + cfg.accent + ')}' +
     '#sa-panel{position:fixed;bottom:100px;' + side + ';width:380px;max-width:calc(100vw - 32px);height:600px;max-height:calc(100vh - 130px);' +
       'background:#fff;border-radius:20px;box-shadow:0 24px 60px rgba(15,23,42,.28);display:flex;flex-direction:column;overflow:hidden;' +
       'opacity:0;transform:translateY(16px) scale(.98);pointer-events:none;transition:opacity .22s,transform .22s;z-index:2147483000}' +
@@ -338,8 +380,11 @@
     '.sa-foot{text-align:center;font-size:11px;color:#94a3b8;padding:0 0 10px;background:#fff}' +
     '@keyframes sa-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}' +
     '@keyframes sa-bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}' +
-    '@media(max-width:480px){#sa-panel{bottom:88px;height:calc(100vh - 110px)}}' +
+    '@media(max-width:480px){#sa-panel{bottom:88px;height:calc(100vh - 110px)}#sa-nudge{max-width:210px}}' +
     '</style>' +
+    '<div id="sa-nudge" role="button" tabindex="0" aria-label="Open chat">' +
+      '<button id="sa-nudge-x" aria-label="Dismiss">×</button>' +
+      '<span id="sa-nudge-dot"></span><span id="sa-nudge-t"></span></div>' +
     '<button id="sa-launcher" aria-label="Open chat">' + cfg.launcher + '</button>' +
     '<div id="sa-panel" role="dialog" aria-label="Support chat">' +
       '<div class="sa-head"><div class="sa-ava">' + cfg.launcher + '</div>' +

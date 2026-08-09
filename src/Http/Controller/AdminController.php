@@ -175,6 +175,10 @@ final class AdminController
             'subtitle_ar' => (string) $request->input('theme_subtitle_ar', ''),
             'name_ar'     => (string) $request->input('theme_name_ar', ''),
             'welcome_ar'  => (string) $request->input('theme_welcome_ar', ''),
+            // Attention "nudge" greeting bubble shown by the launcher (bilingual).
+            'nudge_enabled' => (bool) $request->input('theme_nudge_enabled', false),
+            'nudge'         => (string) $request->input('theme_nudge', ''),
+            'nudge_ar'      => (string) $request->input('theme_nudge_ar', ''),
         ];
         $this->agents->update((int) $agent['id'], [
             'name'              => (string) $request->input('name', $agent['name']),

@@ -86,6 +86,17 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
         <input type="text" name="theme_subtitle" value="<?= $tval('subtitle', 'Typically replies instantly') ?>"></div>
       <div class="field" style="margin-top:8px"><label>العنوان الفرعي (Arabic subtitle)</label>
         <input type="text" name="theme_subtitle_ar" dir="rtl" value="<?= $tval('subtitle_ar', 'يرد عادةً خلال لحظات') ?>"></div>
+
+      <hr style="border:0;border-top:1px solid var(--line);margin:18px 0">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+        <input type="checkbox" name="theme_nudge_enabled" value="1" <?= !empty($theme['nudge_enabled']) ? 'checked' : '' ?>>
+        Show a greeting bubble by the launcher
+      </label>
+      <div class="hint" style="margin-top:5px">A small pop-up line that appears next to the chat icon to invite visitors to chat. Shown once per visitor.</div>
+      <div class="field" style="margin-top:12px"><label>Greeting text</label>
+        <input type="text" name="theme_nudge" placeholder="Hi! How can I assist you today?" value="<?= $tval('nudge') ?>"></div>
+      <div class="field" style="margin-top:8px"><label>نص الترحيب (Arabic greeting)</label>
+        <input type="text" name="theme_nudge_ar" dir="rtl" placeholder="مرحباً! كيف يمكنني مساعدتك اليوم؟" value="<?= $tval('nudge_ar') ?>"></div>
     </div>
 
     <!-- ── Embed ── -->

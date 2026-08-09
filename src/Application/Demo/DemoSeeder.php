@@ -58,6 +58,9 @@ final class DemoSeeder
                 'welcome_ar'  => '👋 مرحباً بك في بروكيورمنت هب! اسألني عن خدماتنا ومنتجاتنا أو أنظمة المشتريات والمحتوى المحلي في السعودية.',
                 'subtitle'    => 'Typically replies instantly',
                 'subtitle_ar' => 'يرد عادةً خلال لحظات',
+                'nudge_enabled' => true,
+                'nudge'         => 'Hi! How can I assist you today?',
+                'nudge_ar'      => 'مرحباً! كيف يمكنني مساعدتك اليوم؟',
             ]),
         ]);
         $this->seedStartupFormCopy();
