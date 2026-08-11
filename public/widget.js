@@ -128,7 +128,7 @@
       open = show;
       panel.classList.toggle('open', open);
       launcher.classList.toggle('active', open);
-      if (open) { hideNudge(true); start(); }
+      if (open) { hideNudge(); start(); }
     }
     launcher.addEventListener('click', function () { toggle(!open); });
     closeBtn.addEventListener('click', function () { toggle(false); });
@@ -136,23 +136,21 @@
     if (HIDE_LAUNCHER) { launcher.style.display = 'none'; }
 
     // ── Attention nudge: a greeting bubble by the launcher ────────────────────
-    // Shown once per visitor (dismissal is remembered), only when the admin has
-    // enabled it and set copy. Clicking it opens the chat; × dismisses it.
-    function hideNudge(remember) {
-      if (!nudge) { return; }
-      nudge.classList.remove('show');
-      if (remember) { try { LS.setItem('sa_nudge_' + AGENT, '1'); } catch (e) {} }
+    // Shown on every visit (every page load), only when the admin has enabled it
+    // and set copy. Dismissing hides it for THIS page view only — it reappears on
+    // the next load. Clicking it opens the chat; × dismisses it.
+    function hideNudge() {
+      if (nudge) { nudge.classList.remove('show'); }
     }
     function maybeNudge() {
-      if (!nudge || !cfg.nudgeOn || !cfg.nudge || HIDE_LAUNCHER) { return; }
-      if (LS.getItem('sa_nudge_' + AGENT) || open) { return; }
+      if (!nudge || !cfg.nudgeOn || !cfg.nudge || HIDE_LAUNCHER || open) { return; }
       nudgeText.textContent = cfg.nudge;
       if (cfg.rtl) { nudge.setAttribute('dir', 'rtl'); }
       setTimeout(function () { if (!open) { nudge.classList.add('show'); } }, 1400);
     }
     if (nudge) {
-      nudge.addEventListener('click', function () { hideNudge(true); toggle(true); });
-      nudgeClose.addEventListener('click', function (e) { e.stopPropagation(); hideNudge(true); });
+      nudge.addEventListener('click', function () { hideNudge(); toggle(true); });
+      nudgeClose.addEventListener('click', function (e) { e.stopPropagation(); hideNudge(); });
       maybeNudge();
     }
 

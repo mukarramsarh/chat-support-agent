@@ -92,7 +92,7 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
         <input type="checkbox" name="theme_nudge_enabled" value="1" <?= !empty($theme['nudge_enabled']) ? 'checked' : '' ?>>
         Show a greeting bubble by the launcher
       </label>
-      <div class="hint" style="margin-top:5px">A small pop-up line that appears next to the chat icon to invite visitors to chat. Shown once per visitor.</div>
+      <div class="hint" style="margin-top:5px">A small pop-up line that appears next to the chat icon to invite visitors to chat. Shown on every visit.</div>
       <div class="field" style="margin-top:12px"><label>Greeting text</label>
         <input type="text" name="theme_nudge" placeholder="Hi! How can I assist you today?" value="<?= $tval('nudge') ?>"></div>
       <div class="field" style="margin-top:8px"><label>نص الترحيب (Arabic greeting)</label>
