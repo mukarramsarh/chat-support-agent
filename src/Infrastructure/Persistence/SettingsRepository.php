@@ -88,6 +88,23 @@ final class SettingsRepository
         ]);
     }
 
+    /**
+     * Session limit + contact-handoff config. When a chat reaches msg_limit
+     * replies, or a question can't be answered from the knowledge, the widget
+     * shows this contact card instead. All copy is bilingual. @return array<string,mixed>
+     */
+    public function handoff(): array
+    {
+        return $this->getJson('handoff', [
+            'enabled'    => false,
+            'msg_limit'  => 0,   // max assistant replies per session (0 = unlimited)
+            'email'      => '',
+            'phone'      => '',
+            'message'    => 'For more details, please contact our team directly:',
+            'message_ar' => 'لمزيد من التفاصيل، يرجى التواصل مع فريقنا مباشرةً:',
+        ]);
+    }
+
     public function kbVersion(): int
     {
         return (int) ($this->get('kb_version', '1'));

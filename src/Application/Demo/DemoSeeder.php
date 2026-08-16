@@ -51,6 +51,8 @@ final class DemoSeeder
         $this->agents->update($agentId, [
             'name'             => 'ProcurementHub Assistant',
             'persona'          => $this->persona(),
+            // Low temperature: literal, consistent replies from a focused KB.
+            'temperature'      => 0.2,
             'welcome_message'  => '👋 Welcome to Procurement Hub! Ask me about our services, products, or Saudi procurement & local-content rules.',
             'fallback_message' => "I don't have that detail — shall I connect you with our team? / لا تتوفر لديّ هذه المعلومة — هل ترغب في توصيلك بفريقنا؟",
             'theme'            => array_merge($agent['theme'] ?: [], [
@@ -64,6 +66,14 @@ final class DemoSeeder
             ]),
         ]);
         $this->seedStartupFormCopy();
+        $this->settings->setJson('handoff', [
+            'enabled'    => true,
+            'msg_limit'  => 6,
+            'email'      => 'info@procurementhub.sa',
+            'phone'      => '+966 55 524 5527',
+            'message'    => 'For more details, please contact our team directly:',
+            'message_ar' => 'لمزيد من التفاصيل، يرجى التواصل مع فريقنا مباشرةً:',
+        ]);
 
         $docs = 0;
         foreach ($this->knowledge() as [$title, $content]) {

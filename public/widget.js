@@ -286,6 +286,9 @@
             // *italic*, `code`, links and bullets display formatted, not literal.
             bubble._raw = (bubble._raw || '') + payload.text;
             bubble.innerHTML = renderMd(bubble._raw); scroll();
+          } else if (event === 'handoff') {
+            if (typing.parentNode) { typing.remove(); }
+            addContactCard(payload);
           } else if (event === 'error') {
             if (typing.parentNode) { typing.remove(); }
             addMessage('bot', payload.message || S.genErr);
@@ -314,6 +317,35 @@
       el.className = 'sa-msg sa-bot sa-typing';
       el.innerHTML = '<span></span><span></span><span></span>';
       log.appendChild(el); scroll(); return el;
+    }
+
+    // Contact-handoff card: a bot bubble with tappable email / phone buttons.
+    // When payload.lock is set (session limit reached), the composer is disabled
+    // so the visitor is routed to contact the team directly.
+    function addContactCard(p) {
+      var el = document.createElement('div');
+      el.className = 'sa-msg sa-bot sa-card';
+      if (cfg.rtl) { el.setAttribute('dir', 'rtl'); }
+      var html = p.text ? '<div class="sa-card-t">' + esc(p.text) + '</div>' : '';
+      html += '<div class="sa-card-btns">';
+      if (p.email) {
+        html += '<a class="sa-card-btn" href="mailto:' + esc(p.email) + '">✉️ ' + esc(p.email) + '</a>';
+      }
+      if (p.phone) {
+        var tel = String(p.phone).replace(/[^+\d]/g, '');
+        html += '<a class="sa-card-btn" href="tel:' + esc(tel) + '">📞 ' + esc(p.phone) + '</a>';
+      }
+      html += '</div>';
+      el.innerHTML = html;
+      log.appendChild(el); scroll();
+      if (p.lock) { lockInput(); }
+      return el;
+    }
+    function lockInput() {
+      input.disabled = true;
+      input.placeholder = cfg.rtl ? 'يرجى التواصل معنا عبر البريد أو الهاتف' : 'Please reach us by email or phone';
+      form.querySelector('button').disabled = true;
+      form.style.opacity = '.6';
     }
     function scroll() { log.scrollTop = log.scrollHeight; }
   }
@@ -359,6 +391,11 @@
     '.sa-bot a{color:' + cfg.primary + ';text-decoration:underline;word-break:break-word}' +
     '.sa-bot strong{font-weight:700}.sa-bot em{font-style:italic}' +
     '.sa-bot code{background:#f1f5f9;border:1px solid #e5e7eb;border-radius:5px;padding:1px 5px;font-size:13px;font-family:ui-monospace,Menlo,Consolas,monospace}' +
+    '.sa-card{max-width:90%}.sa-card-t{margin-bottom:10px}' +
+    '.sa-card-btns{display:flex;flex-direction:column;gap:8px}' +
+    '.sa-card-btn{display:flex;align-items:center;gap:8px;text-decoration:none;font-weight:600;font-size:14px;' +
+      'padding:10px 14px;border-radius:12px;color:#fff;background:linear-gradient(135deg,' + cfg.primary + ',' + cfg.accent + ')}' +
+    '.sa-card-btn:hover{filter:brightness(1.06)}' +
     '.sa-typing{display:flex;gap:4px;align-items:center}' +
     '.sa-typing span{width:7px;height:7px;border-radius:50%;background:#cbd5e1;animation:sa-bounce 1.2s infinite}' +
     '.sa-typing span:nth-child(2){animation-delay:.2s}.sa-typing span:nth-child(3){animation-delay:.4s}' +

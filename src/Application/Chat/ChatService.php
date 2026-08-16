@@ -17,6 +17,7 @@ use SupportAI\Infrastructure\Persistence\MessageRepository;
 use SupportAI\Infrastructure\Persistence\SettingsRepository;
 use SupportAI\Infrastructure\Persistence\UsageRepository;
 use SupportAI\Support\Config;
+use SupportAI\Support\Lang;
 use SupportAI\Support\Logger;
 use Throwable;
 
@@ -80,6 +81,18 @@ final class ChatService
         if ($dailyCap > 0 && $this->usage->todaySpend($agentId) >= $dailyCap) {
             $this->logger->warning('Daily budget reached; declining', ['agent' => $agentId, 'cap' => $dailyCap]);
             $this->declineForBudget($agent, $conversationId, $sse);
+            return;
+        }
+
+        // ── Session limit ──
+        // A business cap (not abuse protection): after N replies in this session
+        // the visitor is handed off to a human via the contact card, so a small
+        // knowledge base intentionally routes deeper questions to email/phone.
+        $handoff = $this->settings->handoff();
+        $limit = (int) ($handoff['msg_limit'] ?? 0);
+        if (!empty($handoff['enabled']) && $limit > 0
+            && (int) ($conversation['message_count'] ?? 0) >= $limit) {
+            $this->emitHandoff($sse, $handoff, $userText, $conversationId, 'session_limit');
             return;
         }
 
@@ -217,6 +230,17 @@ final class ChatService
 
         // Stream the vetted answer to the browser (chunked for the typing effect).
         $this->emitChunks($sse, $answer);
+
+        // Couldn't answer from the knowledge → offer the contact card so a small
+        // KB routes the visitor to a human (input stays open here).
+        if ($verdict === 'escalated') {
+            $handoff = $this->settings->handoff();
+            $hasContact = trim((string) ($handoff['email'] ?? '')) !== ''
+                || trim((string) ($handoff['phone'] ?? '')) !== '';
+            if (!empty($handoff['enabled']) && $hasContact) {
+                $this->emitHandoff($sse, $handoff, $userText, $conversationId, 'escalated');
+            }
+        }
 
         $latency = (int) (microtime(true) * 1000) - $startedAt;
         $evalMeta = [
@@ -512,5 +536,39 @@ final class ChatService
         );
         $this->conversations->setStatus($conversationId, 'needs_attention');
         $sse->event('done', ['usage' => ['cost_usd' => 0], 'budget_exceeded' => true]);
+    }
+
+    /**
+     * Send the contact-handoff card: a short line plus the team's email/phone,
+     * in the visitor's language. Used when the session limit is hit ($reason =
+     * 'session_limit', which locks the input) and can be attached after an
+     * ungrounded answer to route the visitor to a human. No LLM cost.
+     *
+     * @param array<string,mixed> $handoff
+     */
+    private function emitHandoff(SseStream $sse, array $handoff, string $userText, int $conversationId, string $reason): void
+    {
+        $ar = Lang::hasArabic($userText);
+        $message = trim((string) ($ar ? ($handoff['message_ar'] ?? '') : ($handoff['message'] ?? '')))
+            ?: (string) ($handoff['message'] ?? '');
+        $lock = $reason === 'session_limit';
+
+        $sse->event('handoff', [
+            'text'  => $message,
+            'email' => (string) ($handoff['email'] ?? ''),
+            'phone' => (string) ($handoff['phone'] ?? ''),
+            'lock'  => $lock,
+        ]);
+
+        if ($lock) {
+            // The limit turn produces no assistant reply of its own; record the
+            // handoff so the transcript and status reflect it.
+            $this->messages->addAssistant(
+                $conversationId, $message, 'none', new Usage(), 0.0, [],
+                ['verdict' => 'handoff', 'reason' => $reason],
+            );
+            $this->conversations->setStatus($conversationId, 'needs_attention');
+            $sse->event('done', ['usage' => ['cost_usd' => 0], 'handoff' => true]);
+        }
     }
 }

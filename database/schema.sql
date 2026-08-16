@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS agents (
     chat_provider     ENUM('gemini','openai','anthropic') NOT NULL DEFAULT 'gemini',
     chat_model        VARCHAR(120)  NULL,
     utility_model     VARCHAR(120)  NULL,
-    temperature       DECIMAL(3,2)  NOT NULL DEFAULT 0.30,
+    temperature       DECIMAL(3,2)  NOT NULL DEFAULT 0.20,
     -- Budget guardrails (override global)
     monthly_budget_usd DECIMAL(10,2) NOT NULL DEFAULT 2.00,
     max_answer_tokens  SMALLINT UNSIGNED NOT NULL DEFAULT 800,

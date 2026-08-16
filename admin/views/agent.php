@@ -47,7 +47,8 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
         <div class="hint" id="chat_model_hint">Models are fetched live from the provider using your API key.</div></div>
       <div class="row" style="margin-top:14px">
         <div class="field"><label>Temperature</label>
-          <input type="number" step="0.05" min="0" max="1" name="temperature" value="<?= $val('temperature', '0.30') ?>"></div>
+          <input type="number" step="0.05" min="0" max="1" name="temperature" value="<?= $val('temperature', '0.20') ?>">
+          <div class="hint">Lower = more literal, consistent replies (recommended ~0.2 for a small knowledge base).</div></div>
         <div class="field"><label>Monthly budget (USD)</label>
           <input type="number" step="0.5" min="0" name="monthly_budget_usd" value="<?= $val('monthly_budget_usd', '2.00') ?>"></div>
       </div>
@@ -115,6 +116,29 @@ $tval = fn ($k, $d = '') => e((string) ($theme[$k] ?? $d));
         <textarea name="allowed_domains" placeholder="example.com&#10;support.example.com" style="min-height:70px"><?= e($allowed_domains ?? '') ?></textarea>
         <div class="hint">One host per line/comma. Restricts which sites may call the chat API (CORS). Leave blank to allow any (not recommended for production).</div></div>
       <a class="btn ghost" href="<?= u('/demo') ?>" target="_blank" style="margin-top:8px">Open live preview ↗</a>
+    </div>
+
+    <!-- ── Session limit & contact handoff ── -->
+    <div class="card">
+      <h3>Session limit &amp; contact handoff</h3>
+      <label style="display:flex;align-items:center;gap:8px;font-weight:600">
+        <input type="checkbox" name="handoff_enabled" value="1" <?= !empty($handoff['enabled']) ? 'checked' : '' ?>>
+        Enable contact handoff card
+      </label>
+      <div class="hint" style="margin-top:5px">Shown when a session hits the message limit below, and when a question isn't in the knowledge base — inviting the visitor to reach you by email or phone.</div>
+      <div class="field" style="margin-top:12px"><label>Max messages per session (0 = unlimited)</label>
+        <input type="number" min="0" step="1" name="session_msg_limit" value="<?= e((string) ($handoff['msg_limit'] ?? 0)) ?>">
+        <div class="hint">After this many replies in one chat, the assistant stops and shows the contact card.</div></div>
+      <div class="row" style="margin-top:12px">
+        <div class="field"><label>Contact email</label>
+          <input type="email" name="contact_email" placeholder="info@procurementhub.sa" value="<?= e((string) ($handoff['email'] ?? '')) ?>"></div>
+        <div class="field"><label>Contact phone / WhatsApp</label>
+          <input type="text" name="contact_phone" placeholder="+966 55 524 5527" value="<?= e((string) ($handoff['phone'] ?? '')) ?>"></div>
+      </div>
+      <div class="field" style="margin-top:12px"><label>Handoff message</label>
+        <input type="text" name="handoff_message" placeholder="For more details, please contact our team directly:" value="<?= e((string) ($handoff['message'] ?? '')) ?>"></div>
+      <div class="field" style="margin-top:8px"><label>رسالة التواصل (Arabic handoff message)</label>
+        <input type="text" name="handoff_message_ar" dir="rtl" placeholder="لمزيد من التفاصيل، يرجى التواصل مع فريقنا مباشرةً:" value="<?= e((string) ($handoff['message_ar'] ?? '')) ?>"></div>
     </div>
   </div>
 

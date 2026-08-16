@@ -47,6 +47,16 @@ final class Lang
         return self::locale() === 'ar';
     }
 
+    /**
+     * Does the text contain Arabic script? Used to answer a visitor (and pick
+     * bilingual copy like the contact card) in the language they wrote in,
+     * independent of the admin locale.
+     */
+    public static function hasArabic(string $text): bool
+    {
+        return (bool) preg_match('/\p{Arabic}/u', $text);
+    }
+
     public static function get(string $key, ?string $default = null): string
     {
         if (self::locale() === 'en') {

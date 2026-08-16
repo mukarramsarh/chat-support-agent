@@ -157,6 +157,7 @@ final class AdminController
             'saved'           => (bool) $request->input('saved'),
             'app_url'         => $this->config->string('app.url'),
             'allowed_domains' => (string) $this->settings->get('allowed_domains', ''),
+            'handoff'         => $this->settings->handoff(),
         ]);
     }
 
@@ -192,6 +193,16 @@ final class AdminController
             'theme'             => $theme,
         ]);
         $this->settings->set('allowed_domains', trim((string) $request->input('allowed_domains', '')));
+
+        // Session limit + contact-handoff card (stored as JSON, no migration).
+        $this->settings->setJson('handoff', [
+            'enabled'    => (bool) $request->input('handoff_enabled', false),
+            'msg_limit'  => max(0, (int) $request->input('session_msg_limit', 0)),
+            'email'      => trim((string) $request->input('contact_email', '')),
+            'phone'      => trim((string) $request->input('contact_phone', '')),
+            'message'    => (string) $request->input('handoff_message', ''),
+            'message_ar' => (string) $request->input('handoff_message_ar', ''),
+        ]);
         Response::redirect(u('/admin/agent?saved=1'));
     }
 
