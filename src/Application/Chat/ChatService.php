@@ -551,24 +551,32 @@ final class ChatService
         $ar = Lang::hasArabic($userText);
         $message = trim((string) ($ar ? ($handoff['message_ar'] ?? '') : ($handoff['message'] ?? '')))
             ?: (string) ($handoff['message'] ?? '');
+        $email = trim((string) ($handoff['email'] ?? ''));
+        $phone = trim((string) ($handoff['phone'] ?? ''));
+
+        // Put the contact details INTO the reply text (not just widget buttons):
+        // this way they show in the admin transcript AND in every widget — and
+        // because it streams as normal tokens, a handoff turn never leaves the
+        // widget stuck on the typing indicator, even on an older cached build.
+        $lines = [$message];
+        if ($email !== '') { $lines[] = '✉️ ' . $email; }
+        if ($phone !== '') { $lines[] = '📞 ' . $phone; }
+        $fullText = trim(implode("\n", $lines));
+
+        $this->emitChunks($sse, $fullText);
+
         $lock = $reason === 'session_limit';
-
-        $sse->event('handoff', [
-            'text'  => $message,
-            'email' => (string) ($handoff['email'] ?? ''),
-            'phone' => (string) ($handoff['phone'] ?? ''),
-            'lock'  => $lock,
-        ]);
-
         if ($lock) {
-            // The limit turn produces no assistant reply of its own; record the
-            // handoff so the transcript and status reflect it.
+            // The limit turn has no LLM reply of its own; record the handoff so
+            // the transcript and status reflect it.
             $this->messages->addAssistant(
-                $conversationId, $message, 'none', new Usage(), 0.0, [],
+                $conversationId, $fullText, 'none', new Usage(), 0.0, [],
                 ['verdict' => 'handoff', 'reason' => $reason],
             );
             $this->conversations->setStatus($conversationId, 'needs_attention');
-            $sse->event('done', ['usage' => ['cost_usd' => 0], 'handoff' => true]);
+            // 'lock' asks updated widgets to disable the composer; older widgets
+            // simply show the message above and ignore the flag.
+            $sse->event('done', ['usage' => ['cost_usd' => 0], 'handoff' => true, 'lock' => true]);
         }
     }
 }
