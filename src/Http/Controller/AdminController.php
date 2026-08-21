@@ -9,6 +9,7 @@ use SupportAI\Http\Response;
 use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
+use SupportAI\Infrastructure\Persistence\CmsUserRepository;
 use SupportAI\Application\Compliance\ComplianceService;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\ConversationRepository;
@@ -33,6 +34,7 @@ final class AdminController
 
     public function __construct(
         private AdminUserRepository $admins,
+        private CmsUserRepository $cmsUsers,
         private AgentRepository $agents,
         private UsageRepository $usage,
         private VectorStoreFactory $vectors,
@@ -60,47 +62,50 @@ final class AdminController
             return;
         }
         Response::html($this->view->render('login', [
-            'firstRun' => $this->admins->count() === 0,
-            'error'    => null,
+            'error' => null,
         ], null));
     }
 
+    /**
+     * Credentials are verified live, on every login, against the CMS's own
+     * `users` table — the single source of truth across the CMS, support-ai,
+     * and assessment. This app never stores or checks a password of its
+     * own; admin_users is a synced profile row only (see
+     * AdminUserRepository::syncFromCms()), kept so existing foreign keys
+     * (audit_log.admin_id etc.) keep working unchanged.
+     */
     public function login(Request $request): void
     {
         // Brute-force lockout: max 8 failed attempts per IP per 15 minutes.
         $lockKey = 'login:' . $request->ip();
         if ($this->rateLimiter->current($lockKey, 900) > 8) {
-            $this->loginError($this->admins->count() === 0, 'Too many attempts. Please wait 15 minutes and try again.');
+            $this->loginError('Too many attempts. Please wait 15 minutes and try again.');
             return;
         }
 
-        $email = trim((string) $request->input('email', ''));
+        $identifier = trim((string) $request->input('email', ''));
         $password = (string) $request->input('password', '');
-        $firstRun = $this->admins->count() === 0;
 
-        if ($firstRun) {
-            // Bootstrap the owner account from the first submitted credentials.
-            if (mb_strlen($password) < 8) {
-                $this->loginError($firstRun, 'Choose a password of at least 8 characters.');
-                return;
-            }
-            $id = $this->admins->create($email, 'Owner', password_hash($password, PASSWORD_DEFAULT), 'owner');
-            session_regenerate_id(true); // fresh id once authenticated (anti-fixation)
-            $_SESSION['admin_id'] = $id;
-            Response::redirect(u('/admin'));
-            return;
-        }
+        $cmsUser = $identifier !== '' ? $this->cmsUsers->findLoginable($identifier) : null;
 
-        $user = $this->admins->findByEmail($email);
-        if ($user === null || !password_verify($password, $user['password_hash'])) {
+        if ($cmsUser === null
+            || !password_verify($password, $cmsUser['password_hash'])
+            || !(bool) $cmsUser['is_active']
+            || $cmsUser['role'] === 'contributor'
+        ) {
             $this->rateLimiter->tooMany($lockKey, 8, 900); // count this failed attempt
-            $this->loginError($firstRun, 'Invalid email or password.');
+            $this->loginError('Invalid email/username or password.');
             return;
         }
+
         $this->rateLimiter->clear($lockKey, 900);
+
+        $localRole = $cmsUser['role'] === 'admin' ? 'owner' : 'admin'; // CMS admin -> owner, CMS editor -> admin
+        $local = $this->admins->syncFromCms((string) $cmsUser['email'], (string) $cmsUser['name'], $localRole);
+
         session_regenerate_id(true); // fresh id once authenticated (anti-fixation)
-        $_SESSION['admin_id'] = (int) $user['id'];
-        $this->admins->touchLogin((int) $user['id']);
+        $_SESSION['admin_id'] = (int) $local['id'];
+        $this->admins->touchLogin((int) $local['id']);
         Response::redirect(u('/admin'));
     }
 
@@ -400,8 +405,8 @@ final class AdminController
         ]));
     }
 
-    private function loginError(bool $firstRun, string $message): void
+    private function loginError(string $message): void
     {
-        Response::html($this->view->render('login', ['firstRun' => $firstRun, 'error' => $message], null));
+        Response::html($this->view->render('login', ['error' => $message], null));
     }
 }

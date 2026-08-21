@@ -37,6 +37,19 @@ final class Config
                 'pass'    => Env::get('DB_PASS', ''),
                 'charset' => Env::get('DB_CHARSET', 'utf8mb4'),
             ],
+            // Read-only connection to the CMS's own database — the single
+            // source of truth for admin login credentials. See
+            // AdminController::login() / CmsUserRepository. Defaults to the
+            // same host/user/pass as the app's own DB since both live on the
+            // same MySQL server, just a different database name.
+            'cms_db' => [
+                'host'    => Env::get('CMS_DB_HOST', Env::get('DB_HOST', '127.0.0.1')),
+                'port'    => (int) Env::get('CMS_DB_PORT', (string) Env::get('DB_PORT', '3306')),
+                'name'    => Env::get('CMS_DB_NAME', 'procurementhub'),
+                'user'    => Env::get('CMS_DB_USER', Env::get('DB_USER', 'root')),
+                'pass'    => Env::get('CMS_DB_PASS', Env::get('DB_PASS', '')),
+                'charset' => Env::get('CMS_DB_CHARSET', 'utf8mb4'),
+            ],
             'vector' => [
                 'driver'         => Env::get('VECTOR_DRIVER', 'auto'),
                 'pinecone_key'   => Env::get('PINECONE_API_KEY', ''),

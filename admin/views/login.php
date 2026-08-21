@@ -1,11 +1,11 @@
-<?php /** @var bool $firstRun @var ?string $error */
+<?php /** @var ?string $error */
 use SupportAI\Support\Lang; ?>
 <!doctype html>
 <html lang="<?= e(Lang::locale()) ?>" dir="<?= Lang::isRtl() ? 'rtl' : 'ltr' ?>">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title><?= $firstRun ? 'Create owner account' : 'Sign in' ?> · support-ai</title>
+<title>Sign in · support-ai</title>
 <style>
   *{box-sizing:border-box}
   body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -30,19 +30,18 @@ use SupportAI\Support\Lang; ?>
   <form class="box" method="post" action="<?= u('/admin/login') ?>">
     <?= csrf_field() ?>
     <div class="logo">◆</div>
-    <h1><?= e($firstRun ? t('Create your account') : t('Welcome back')) ?></h1>
-    <p class="sub"><?= e($firstRun ? t('Set up the owner login for this install.') : t('Sign in to the support-ai admin.')) ?></p>
+    <h1><?= e(t('Welcome back')) ?></h1>
+    <p class="sub"><?= e(t('Sign in with your Procurement Hub CMS account.')) ?></p>
 
     <?php if (!empty($error)): ?><div class="err"><?= e($error) ?></div><?php endif; ?>
-    <?php if ($firstRun): ?><div class="hint">First run detected — the credentials you enter become the owner account.</div><?php endif; ?>
 
-    <label for="email"><?= e(t('Email')) ?></label>
-    <input id="email" name="email" type="email" required autofocus placeholder="you@example.com">
+    <label for="email"><?= e(t('Username or email')) ?></label>
+    <input id="email" name="email" type="text" required autofocus placeholder="you@example.com">
 
     <label for="password"><?= e(t('Password')) ?></label>
-    <input id="password" name="password" type="password" required placeholder="<?= $firstRun ? 'At least 8 characters' : '••••••••' ?>">
+    <input id="password" name="password" type="password" required placeholder="••••••••">
 
-    <button class="btn" type="submit"><?= e($firstRun ? t('Create account') : t('Sign in')) ?></button>
+    <button class="btn" type="submit"><?= e(t('Sign in')) ?></button>
   </form>
 </body>
 </html>

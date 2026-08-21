@@ -34,6 +34,7 @@ use SupportAI\Infrastructure\Database\Database;
 use SupportAI\Infrastructure\LLM\Pricing;
 use SupportAI\Infrastructure\LLM\ProviderFactory;
 use SupportAI\Infrastructure\Persistence\AdminUserRepository;
+use SupportAI\Infrastructure\Persistence\CmsUserRepository;
 use SupportAI\Infrastructure\Persistence\AgentRepository;
 use SupportAI\Infrastructure\Persistence\AnswerCacheRepository;
 use SupportAI\Infrastructure\Persistence\AuditRepository;
@@ -98,6 +99,7 @@ $c->set(AgentRepository::class, fn (Container $c) => new AgentRepository($c->get
 $c->set(ConversationRepository::class, fn (Container $c) => new ConversationRepository($c->get(Database::class)));
 $c->set(MessageRepository::class, fn (Container $c) => new MessageRepository($c->get(Database::class)));
 $c->set(AdminUserRepository::class, fn (Container $c) => new AdminUserRepository($c->get(Database::class)));
+$c->set(CmsUserRepository::class, fn (Container $c) => new CmsUserRepository($c->get(Config::class)));
 $c->set(UsageRepository::class, fn (Container $c) => new UsageRepository($c->get(Database::class), $c->get(Pricing::class)));
 $c->set(DocumentRepository::class, fn (Container $c) => new DocumentRepository($c->get(Database::class)));
 $c->set(ChunkRepository::class, fn (Container $c) => new ChunkRepository($c->get(Database::class)));
@@ -201,6 +203,7 @@ $c->set(InstallController::class, fn (Container $c) => new InstallController(
 ));
 $c->set(SsoController::class, fn (Container $c) => new SsoController(
     $c->get(AdminUserRepository::class),
+    $c->get(CmsUserRepository::class),
     $c->get(AuditRepository::class),
     $c->get(RateLimiter::class),
     $c->get(Config::class),
@@ -238,6 +241,7 @@ $c->set(DocumentController::class, fn (Container $c) => new DocumentController(
 ));
 $c->set(AdminController::class, fn (Container $c) => new AdminController(
     $c->get(AdminUserRepository::class),
+    $c->get(CmsUserRepository::class),
     $c->get(AgentRepository::class),
     $c->get(UsageRepository::class),
     $c->get(VectorStoreFactory::class),
