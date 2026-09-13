@@ -54,6 +54,22 @@ final class InstallController
             return;
         }
 
+        // CMS database — admin login is verified against the CMS's own `users`
+        // table (see CmsUserRepository), so this must point at the right
+        // database or nobody will ever be able to sign in. Reuses this app's
+        // own host/user/pass when left blank (common: same MySQL server).
+        $cmsDb = [
+            'host' => $in('cms_db_host') ?: $db['host'],
+            'port' => (int) ($in('cms_db_port') ?: $db['port']),
+            'name' => $in('cms_db_name'),
+            'user' => $in('cms_db_user') ?: $db['user'],
+            'pass' => $request->input('cms_db_pass', '') !== '' ? (string) $request->input('cms_db_pass', '') : $db['pass'],
+        ];
+        if ($cmsDb['name'] === '') {
+            $this->render('CMS database name is required — admin login reads the CMS\'s own `users` table.', $request->body);
+            return;
+        }
+
         // 1) Test the DB connection with the supplied credentials.
         try {
             $pdo = new PDO(
@@ -63,6 +79,20 @@ final class InstallController
             );
         } catch (Throwable $e) {
             $this->render('Could not connect to the database: ' . $e->getMessage(), $request->body);
+            return;
+        }
+
+        // 1b) Test the CMS database + confirm it actually has a `users` table,
+        // so a wrong database name fails loudly here instead of at login time.
+        try {
+            $cmsPdo = new PDO(
+                "mysql:host={$cmsDb['host']};port={$cmsDb['port']};dbname={$cmsDb['name']};charset=utf8mb4",
+                $cmsDb['user'], $cmsDb['pass'],
+                [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
+            );
+            $cmsPdo->query('SELECT 1 FROM users LIMIT 1');
+        } catch (Throwable $e) {
+            $this->render('Could not reach the CMS database/users table: ' . $e->getMessage(), $request->body);
             return;
         }
 
@@ -78,7 +108,7 @@ final class InstallController
         }
 
         // 3) Write .env (or show it for manual copy if not writable).
-        $env = $this->buildEnv($db, $request);
+        $env = $this->buildEnv($db, $cmsDb, $request);
         $envPath = base_path('.env');
         if (@file_put_contents($envPath, $env) === false) {
             $this->render(null, $request->body, $env); // show content to paste manually
@@ -139,7 +169,7 @@ final class InstallController
         return true;
     }
 
-    private function buildEnv(array $db, Request $request): string
+    private function buildEnv(array $db, array $cmsDb, Request $request): string
     {
         $in = fn (string $k, string $d = '') => trim((string) $request->input($k, $d));
         $key = bin2hex(random_bytes(24));
@@ -152,6 +182,10 @@ final class InstallController
             'SSO_SECRET=' . bin2hex(random_bytes(24)), 'SSO_TTL_SECONDS=60',
             '', 'DB_HOST=' . $db['host'], 'DB_PORT=' . $db['port'], 'DB_NAME=' . $db['name'],
             'DB_USER=' . $db['user'], 'DB_PASS=' . $db['pass'], 'DB_CHARSET=utf8mb4',
+            // Admin login reads the CMS's own `users` table — see CmsUserRepository.
+            '', 'CMS_DB_HOST=' . $cmsDb['host'], 'CMS_DB_PORT=' . $cmsDb['port'],
+            'CMS_DB_NAME=' . $cmsDb['name'], 'CMS_DB_USER=' . $cmsDb['user'],
+            'CMS_DB_PASS=' . $cmsDb['pass'], 'CMS_DB_CHARSET=utf8mb4',
             '', 'VECTOR_DRIVER=auto',
             'PINECONE_API_KEY=' . $in('pinecone_key'), 'PINECONE_INDEX_HOST=' . $in('pinecone_host'),
             '', 'GEMINI_API_KEY=' . $in('gemini_key'), 'OPENAI_API_KEY=' . $in('openai_key'),

@@ -72,6 +72,25 @@ $v = fn ($k, $d = '') => e((string) ($values[$k] ?? $d));
     </div>
 
     <div class="card">
+      <h3>CMS database</h3>
+      <p class="muted">Admin login has no separate signup — you sign in with an existing
+        procurementhub.sa CMS admin/editor account. Point this at the CMS's own database
+        (usually the same host/user/password as above, but almost always a <em>different
+        database name</em> — check cPanel &rarr; MySQL Databases for the exact name; it's
+        rarely literally "procurementhub").</p>
+      <div class="row">
+        <div><label>Host</label><input name="cms_db_host" value="<?= $v('cms_db_host', $v('db_host', '127.0.0.1')) ?>"></div>
+        <div><label>Port</label><input name="cms_db_port" value="<?= $v('cms_db_port', $v('db_port', '3306')) ?>"></div>
+      </div>
+      <label>CMS database name</label><input name="cms_db_name" value="<?= $v('cms_db_name') ?>" required placeholder="e.g. procurem_website">
+      <div class="row">
+        <div><label>User</label><input name="cms_db_user" value="<?= $v('cms_db_user', $v('db_user')) ?>"></div>
+        <div><label>Password</label><input name="cms_db_pass" type="password" value="<?= $v('cms_db_pass') ?>"></div>
+      </div>
+      <div class="muted">Leave user/password blank to reuse the app database's own credentials above.</div>
+    </div>
+
+    <div class="card">
       <h3>Site &amp; AI keys</h3>
       <label>Public URL</label><input name="app_url" value="<?= $v('app_url') ?>" placeholder="https://staging-dev.procurementhub.sa/chatbot">
       <label>Sub-directory path (optional)</label><input name="base_path" value="<?= $v('base_path') ?>" placeholder="/chatbot — leave blank if at a domain/subdomain root">

@@ -32,7 +32,18 @@ Note the DB name, user, and password.
 
 ## 4. Run the web installer
 Open **`https://staging-dev.procurementhub.sa/chatbot/install`** and fill in:
-- **Database:** host `localhost`, the DB name / user / password from step 3.
+- **Database:** host `localhost`, the DB name / user / password from step 3 (the
+  chatbot's own database).
+- **CMS database:** a *different* database — the one the main procurementhub.sa CMS
+  itself uses. There is no separate signup for the chatbot admin panel; login is
+  verified live against the CMS's own `users` table (§7), so this must be correct or
+  nobody can sign in. On cPanel-style hosting the CMS database is almost never
+  literally named `procurementhub` — it's normally prefixed with your cPanel account
+  username (e.g. `procurem_something`). Check cPanel → **MySQL Databases** for the
+  exact name. Host/user/password default to the same values as the chatbot's own
+  database above (fine when both share one MySQL server); only the database *name*
+  usually needs to be different. The installer tests this connection (and that a
+  `users` table exists) before continuing.
 - **Public URL:** `https://staging-dev.procurementhub.sa/chatbot`
 - **Sub-directory path:** `/chatbot`
 - **API keys:** Gemini + OpenAI (paste your keys).
@@ -56,7 +67,8 @@ flags this.
 This creates the bilingual master prompt, 20 knowledge docs (company + Saudi
 procurement/local-content), and the eval set.
 
-**Easiest:** open `/chatbot/admin` → create your owner account → go to **Knowledge**
+**Easiest:** open `/chatbot/admin` and sign in with an existing procurementhub.sa CMS
+admin/editor account (there is no separate signup here — see §7) → go to **Knowledge**
 → click **⚡ Seed ProcurementHub data**. (It runs while you're signed in.)
 
 **Or by URL** (no login needed) — the installer generated a `SEED_TOKEN` in `.env`:
@@ -71,7 +83,12 @@ Re-running it is safe — it replaces the knowledge base with a fresh seed.
 > Prefer CLI? `php bin/console demo` does the same thing.
 
 ## 7. Configure in the admin
-Open **`/chatbot/admin`** and create the owner account (first visit).
+Open **`/chatbot/admin`** and sign in — there is no signup form. Credentials are
+checked live against the CMS's own `users` table (see step 4's **CMS database**
+setting): use an existing CMS **admin** or **editor** account (email/username +
+that account's actual CMS password). A CMS **contributor** role cannot sign in
+here. First successful login auto-creates the matching local profile row
+(`role: admin` → owner here, `editor` → admin here).
 - **Agent** page → *Allowed embed domains*: add `procurementhub.sa` and `staging-dev.procurementhub.sa`.
 - **Privacy & form** page → enable **RTL (Arabic)** if you want Arabic-first chrome; keep
   **PII redaction** ON; set a **retention** period if desired.
@@ -100,9 +117,9 @@ Or open chat from your own button:
 
 ## Checklist
 - [ ] HTTPS/AutoSSL active on `staging-dev.procurementhub.sa`
-- [ ] `/chatbot/install` completed & self-locked
+- [ ] `/chatbot/install` completed & self-locked (CMS database confirmed reachable)
 - [ ] `php bin/console demo` seeded (20 docs, eval set)
-- [ ] Owner account created; allowed domains set
+- [ ] Signed into `/chatbot/admin` with an existing CMS admin/editor account; allowed domains set
 - [ ] Cron scheduled
 - [ ] Widget embedded and tested in EN + AR
 - [ ] DPO review of cross-border processing (Gemini/OpenAI) — see item 11 in checklist.md
